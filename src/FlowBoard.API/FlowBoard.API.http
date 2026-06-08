@@ -1,0 +1,64 @@
+@host = http://localhost:5248
+@email = demo@flowboard.local
+@password = Password123!
+
+### Health — liveness
+GET {{host}}/health/live
+
+### Register
+# @name register
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "fullName": "Demo User",
+  "password": "{{password}}",
+  "confirmPassword": "{{password}}"
+}
+
+### Login
+# @name login
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### Create workspace
+# @name createWorkspace
+POST {{host}}/api/workspaces
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.accessToken}}
+
+{
+  "name": "My Workspace",
+  "slug": null
+}
+
+### List my workspaces
+GET {{host}}/api/workspaces
+Authorization: Bearer {{login.response.body.accessToken}}
+
+### Get workspace by id
+GET {{host}}/api/workspaces/{{createWorkspace.response.body.id}}
+Authorization: Bearer {{login.response.body.accessToken}}
+
+### Refresh token
+POST {{host}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "token": "{{login.response.body.refreshToken}}"
+}
+
+### Logout
+POST {{host}}/api/auth/logout
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.accessToken}}
+
+{
+  "refreshToken": "{{login.response.body.refreshToken}}"
+}
