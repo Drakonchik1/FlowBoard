@@ -28,7 +28,7 @@ public sealed class CreateWorkspaceCommandHandler(
 
         var slugTaken = await workspaceRepository.SlugExistsAsync(slug.Value, cancellationToken);
         if (slugTaken)
-            throw new ValidationException([new ValidationError("Slug", "Workspace slug is already taken.")]);
+            throw new ConflictException("Workspace slug is already taken.");
 
         var workspace = Workspace.Create(request.Name, slug, ownerId);
         await workspaceRepository.AddAsync(workspace, cancellationToken);

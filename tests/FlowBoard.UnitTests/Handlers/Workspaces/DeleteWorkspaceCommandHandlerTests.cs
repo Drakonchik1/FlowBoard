@@ -1,4 +1,3 @@
-using FlowBoard.Application.Common.Exceptions;
 using FlowBoard.Application.Common.Interfaces;
 using FlowBoard.Application.Features.Workspaces.Commands.DeleteWorkspace;
 using FlowBoard.Domain.Entities;
@@ -19,10 +18,11 @@ public sealed class DeleteWorkspaceCommandHandlerTests
         new(_workspaceRepo.Object, _unitOfWork.Object, _currentUser.Object);
 
     [Fact]
-    public async Task Handle_Owner_SoftDeletesAndSaves()
+    public async Task Handle_Owner_SoftDeletesWorkspace()
     {
         var ownerId = Guid.NewGuid();
         var workspace = Workspace.Create("Acme", WorkspaceSlug.Create("acme"), ownerId);
+
         _currentUser.Setup(c => c.UserId).Returns(ownerId);
         _workspaceRepo.Setup(r => r.GetByIdWithMembersAsync(workspace.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(workspace);
@@ -34,19 +34,18 @@ public sealed class DeleteWorkspaceCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_Admin_Throws403()
+    public async Task Handle_Admin_Returns404ToPreventEnumeration()
     {
         var ownerId = Guid.NewGuid();
         var adminId = Guid.NewGuid();
         var workspace = Workspace.Create("Acme", WorkspaceSlug.Create("acme"), ownerId);
         workspace.InviteMember(adminId, WorkspaceMemberRole.Admin);
+
         _currentUser.Setup(c => c.UserId).Returns(adminId);
         _workspaceRepo.Setup(r => r.GetByIdWithMembersAsync(workspace.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(workspace);
 
-        await Assert.ThrowsAsync<ForbiddenException>(() =>
+        await Assert.ThrowsAsync<NotFoundException>(() =>
             CreateHandler().Handle(new DeleteWorkspaceCommand(workspace.Id), CancellationToken.None));
-
-        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 }

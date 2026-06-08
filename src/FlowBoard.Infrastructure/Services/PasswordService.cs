@@ -10,6 +10,10 @@ internal sealed class PasswordService : IPasswordService
 {
     private const int WorkFactor = 12;
 
+    // Pre-computed at type load — hash of "timing-safe-dummy-password"
+    public string TimingSafeDummyHash { get; } =
+        BCrypt.Net.BCrypt.HashPassword("timing-safe-dummy-password", WorkFactor);
+
     public string Hash(string password) =>
         BCrypt.Net.BCrypt.HashPassword(password, WorkFactor);
 

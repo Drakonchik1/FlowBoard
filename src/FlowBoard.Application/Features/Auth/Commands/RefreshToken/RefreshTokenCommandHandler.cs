@@ -12,11 +12,10 @@ namespace FlowBoard.Application.Features.Auth.Commands.RefreshToken;
 /// Token rotation with family-based reuse detection.
 /// Flow:
 ///   1. Look up any token with this hash (active or revoked).
-///   2. Not found → expired or fabricated → 401.
-///   3. Found but revoked/expired → REUSE DETECTED → revoke entire family → 401.
-///   4. Found and active → revoke it → issue replacement in same family → return new pair.
-/// Step 3 is the security property: a stolen token that has already been rotated triggers
-/// full family invalidation, protecting the legitimate user.
+///   2. Not found → 401.
+///   3. Found but revoked → REUSE DETECTED → revoke entire family → 401.
+///   4. Found but expired → 401 (no family revocation — natural expiry is not reuse).
+///   5. Found and active → revoke it → issue replacement in same family → return new pair.
 /// </summary>
 public sealed class RefreshTokenCommandHandler(
     IRefreshTokenRepository refreshTokenRepository,
@@ -24,32 +23,31 @@ public sealed class RefreshTokenCommandHandler(
     IUnitOfWork unitOfWork,
     IJwtService jwtService) : IRequestHandler<RefreshTokenCommand, AuthResponse>
 {
+    private const string InvalidRefreshTokenMessage = "Invalid or expired refresh token.";
+
     public async Task<AuthResponse> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
     {
         var tokenHash = TokenHasher.Hash(request.Token);
 
-        // Look up any token — active OR revoked
         var existing = await refreshTokenRepository.GetByHashAsync(tokenHash, cancellationToken);
 
         if (existing is null)
-            throw new UnauthorizedException("Refresh token is invalid or has expired.");
+            throw new UnauthorizedException(InvalidRefreshTokenMessage);
 
-        if (!existing.IsActive)
+        if (existing.IsRevoked)
         {
-            // Token exists but is already revoked or expired.
-            // This is a reuse attempt — the token was already consumed and rotated.
-            // Revoke the entire family to protect all sessions derived from this login.
             await refreshTokenRepository.RevokeEntireFamilyAsync(existing.FamilyId, cancellationToken);
             await unitOfWork.SaveChangesAsync(cancellationToken);
-            throw new UnauthorizedException("Refresh token has already been used. All sessions have been invalidated for security.");
+            throw new UnauthorizedException(InvalidRefreshTokenMessage);
         }
 
-        // Global query filter on User already excludes soft-deleted accounts — null means deleted or not found
+        if (existing.IsExpired)
+            throw new UnauthorizedException(InvalidRefreshTokenMessage);
+
         var user = await userRepository.GetByIdAsync(existing.UserId, cancellationToken);
         if (user is null)
-            throw new UnauthorizedException("User account not found.");
+            throw new UnauthorizedException(InvalidRefreshTokenMessage);
 
-        // Revoke the consumed token and issue a replacement in the same family
         existing.Revoke();
 
         var refresh = jwtService.GenerateRefreshToken();

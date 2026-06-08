@@ -22,8 +22,11 @@ public sealed class LoginCommandHandler(
     {
         var user = await userRepository.GetByEmailAsync(request.Email, cancellationToken);
 
-        // Generic error to prevent user enumeration
-        if (user is null || !passwordService.Verify(request.Password, user.PasswordHash))
+        // Always verify to avoid timing side-channel revealing whether the email exists
+        var hashToVerify = user?.PasswordHash ?? passwordService.TimingSafeDummyHash;
+        var passwordValid = passwordService.Verify(request.Password, hashToVerify);
+
+        if (user is null || !passwordValid)
             throw new UnauthorizedException("Invalid email or password.");
 
         var refresh = jwtService.GenerateRefreshToken();

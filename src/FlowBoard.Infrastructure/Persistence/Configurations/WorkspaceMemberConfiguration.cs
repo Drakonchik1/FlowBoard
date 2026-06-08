@@ -27,6 +27,11 @@ internal sealed class WorkspaceMemberConfiguration : IEntityTypeConfiguration<Wo
 
         builder.Property(m => m.JoinedAt).IsRequired();
 
+        builder.HasOne<User>()
+            .WithMany()
+            .HasForeignKey(m => m.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.Ignore(m => m.DomainEvents);
     }
 }

@@ -1,7 +1,10 @@
+using FlowBoard.Application.Common.Exceptions;
 using FlowBoard.Domain.Common;
 using FlowBoard.Domain.Events;
 using FlowBoard.Domain.Interfaces;
 using MediatR;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 
 namespace FlowBoard.Infrastructure.Persistence;
 
@@ -23,20 +26,36 @@ internal sealed class UnitOfWork(FlowBoardDbContext context, IPublisher publishe
             .SelectMany(e => e.DomainEvents)
             .ToList();
 
-        // Clear events before saving — prevents duplicate dispatch if the operation is retried
         foreach (var entity in entitiesWithEvents)
             entity.ClearDomainEvents();
 
-        var result = await context.SaveChangesAsync(cancellationToken);
-
-        // Dispatch after successful commit only
-        foreach (var domainEvent in domainEvents)
+        try
         {
-            var notification = DomainEventNotification.Wrap(domainEvent);
-            await publisher.Publish(notification, cancellationToken);
+            var result = await context.SaveChangesAsync(cancellationToken);
+
+            foreach (var domainEvent in domainEvents)
+            {
+                var notification = DomainEventNotification.Wrap(domainEvent);
+                await publisher.Publish(notification, cancellationToken);
+            }
+
+            return result;
+        }
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+        {
+            throw new ConflictException("A resource with this value already exists.");
+        }
+    }
+
+    private static bool IsUniqueConstraintViolation(DbUpdateException ex)
+    {
+        for (var inner = ex.InnerException; inner is not null; inner = inner.InnerException)
+        {
+            if (inner is SqlException { Number: 2627 or 2601 })
+                return true;
         }
 
-        return result;
+        return false;
     }
 }
 

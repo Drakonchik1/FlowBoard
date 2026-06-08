@@ -46,13 +46,13 @@ public sealed class CreateWorkspaceCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_SlugTaken_ThrowsValidationException()
+    public async Task Handle_SlugTaken_ThrowsConflictException()
     {
         _currentUser.Setup(c => c.UserId).Returns(Guid.NewGuid());
         _workspaceRepo.Setup(r => r.SlugExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        await Assert.ThrowsAsync<ValidationException>(() =>
+        await Assert.ThrowsAsync<ConflictException>(() =>
             CreateHandler().Handle(new CreateWorkspaceCommand("Acme", "acme"), CancellationToken.None));
 
         _workspaceRepo.Verify(r => r.AddAsync(It.IsAny<Workspace>(), It.IsAny<CancellationToken>()), Times.Never);

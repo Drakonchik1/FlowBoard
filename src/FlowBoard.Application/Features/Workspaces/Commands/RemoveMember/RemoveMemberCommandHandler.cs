@@ -22,11 +22,8 @@ public sealed class RemoveMemberCommandHandler(
         var workspace = await workspaceRepository.GetByIdWithMembersAsync(request.WorkspaceId, cancellationToken)
             ?? throw new NotFoundException("Workspace", request.WorkspaceId);
 
-        // Either the user is removing themselves (leave), or they are Admin/Owner removing someone else
-        if (request.UserId != actorId)
-            workspace.EnsureAdmin(actorId);
-        else
-            workspace.EnsureMember(actorId);
+        WorkspaceAccess.EnsureCanManageMemberOrNotFound(
+            workspace, actorId, request.UserId, request.WorkspaceId);
 
         workspace.RemoveMember(request.UserId);
 

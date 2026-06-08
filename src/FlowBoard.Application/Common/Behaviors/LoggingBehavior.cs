@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using FlowBoard.Application.Common.Exceptions;
+using FlowBoard.Domain.Exceptions;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -6,8 +8,7 @@ namespace FlowBoard.Application.Common.Behaviors;
 
 /// <summary>
 /// MediatR pipeline behavior that records request duration with structured logging.
-/// Single log line per request: Debug for happy path, Warning for &gt; 500ms, Error for exceptions.
-/// Cuts log volume in half vs paired start/end logging while keeping observability.
+/// Expected failures (validation, auth, not-found) log at Warning; unexpected at Error.
 /// </summary>
 public sealed class LoggingBehavior<TRequest, TResponse>(
     ILogger<LoggingBehavior<TRequest, TResponse>> logger)
@@ -39,7 +40,11 @@ public sealed class LoggingBehavior<TRequest, TResponse>(
         catch (Exception ex)
         {
             sw.Stop();
-            logger.LogError(ex,
+            var isExpected = ex is ValidationException or UnauthorizedException or ForbiddenException
+                or NotFoundException or DomainException or ConflictException;
+
+            var level = isExpected ? LogLevel.Warning : LogLevel.Error;
+            logger.Log(level, ex,
                 "Request {RequestName} failed after {ElapsedMs}ms",
                 requestName, sw.ElapsedMilliseconds);
             throw;

@@ -67,8 +67,15 @@ public sealed class WorkspaceSlugTests
     public void FromName_WithEmptyOrShortName_FallsBackToGuidBased()
     {
         var slug = WorkspaceSlug.FromName("!!");
-        // Should still be valid — fallback guarantees length
         Assert.NotNull(slug);
         Assert.True(slug.Value.Length >= 3);
+    }
+
+    [Fact]
+    public void FromName_TruncationStillProducesValidSlug()
+    {
+        var slug = WorkspaceSlug.FromName(new string('a', 80) + "!!!");
+        Assert.True(slug.Value.Length is >= 3 and <= 60);
+        Assert.Matches("^[a-z0-9]+(-[a-z0-9]+)*$", slug.Value);
     }
 }

@@ -19,6 +19,7 @@ public sealed class AuthController(ISender sender) : ControllerBase
     [HttpPost("register")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> Register(
         [FromBody] RegisterCommand command,

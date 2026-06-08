@@ -46,14 +46,14 @@ public sealed class RegisterCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_EmailAlreadyExists_ThrowsValidationException()
+    public async Task Handle_EmailAlreadyExists_ThrowsConflictException()
     {
         var command = new RegisterCommand("existing@example.com", "Test User", "Password123!", "Password123!");
 
         _userRepo.Setup(r => r.ExistsByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        await Assert.ThrowsAsync<ValidationException>(() =>
+        await Assert.ThrowsAsync<ConflictException>(() =>
             CreateHandler().Handle(command, CancellationToken.None));
 
         _userRepo.Verify(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);

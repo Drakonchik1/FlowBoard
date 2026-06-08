@@ -14,4 +14,10 @@ public interface IPasswordService
     /// Uses constant-time comparison to prevent timing attacks.
     /// </summary>
     bool Verify(string password, string hash);
+
+    /// <summary>
+    /// Pre-computed BCrypt hash used when the user record does not exist,
+    /// so login always performs a verify and avoids user-enumeration via timing.
+    /// </summary>
+    string TimingSafeDummyHash { get; }
 }

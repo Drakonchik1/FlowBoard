@@ -18,7 +18,7 @@ public sealed class UpdateWorkspaceCommandHandler(
         var workspace = await workspaceRepository.GetByIdWithMembersAsync(request.WorkspaceId, cancellationToken)
             ?? throw new NotFoundException("Workspace", request.WorkspaceId);
 
-        workspace.EnsureAdmin(userId); // Owner or Admin only
+        WorkspaceAccess.EnsureAdminOrNotFound(workspace, userId, request.WorkspaceId);
         workspace.Rename(request.Name);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);

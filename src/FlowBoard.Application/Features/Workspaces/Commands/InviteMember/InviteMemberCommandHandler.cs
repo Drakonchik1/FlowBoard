@@ -27,8 +27,12 @@ public sealed class InviteMemberCommandHandler(
         var workspace = await workspaceRepository.GetByIdWithMembersAsync(request.WorkspaceId, cancellationToken)
             ?? throw new NotFoundException("Workspace", request.WorkspaceId);
 
-        workspace.EnsureAdmin(actorId);
-        var member = workspace.InviteMember(invitee.Id, request.Role);
+        WorkspaceAccess.EnsureAdminOrNotFound(workspace, actorId, request.WorkspaceId);
+
+        if (workspace.HasMember(invitee.Id))
+            throw new ConflictException("User is already a member of this workspace.");
+
+        var member = workspace.InviteMember(invitee.Id, WorkspaceRoleMapper.ToDomain(request.Role));
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 

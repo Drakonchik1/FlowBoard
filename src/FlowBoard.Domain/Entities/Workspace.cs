@@ -55,6 +55,7 @@ public sealed class Workspace : Entity
 
         workspace.Raise(new WorkspaceCreatedEvent(workspace.Id, ownerId, workspace.Name, slug.Value));
         workspace.Raise(new MemberInvitedEvent(workspace.Id, ownerId, WorkspaceMemberRole.Owner));
+        workspace.ValidateInvariants();
 
         return workspace;
     }
@@ -67,7 +68,7 @@ public sealed class Workspace : Entity
         UpdatedAt = DateTime.UtcNow;
     }
 
-    /// <summary>Soft-deletes. The matching query filter on RefreshToken+Members hides them automatically.</summary>
+    /// <summary>Soft-deletes the workspace. Member rows remain; the workspace global query filter hides them.</summary>
     public void SoftDelete()
     {
         IsDeleted = true;
@@ -96,6 +97,7 @@ public sealed class Workspace : Entity
         UpdatedAt = DateTime.UtcNow;
 
         Raise(new MemberInvitedEvent(Id, userId, role));
+        ValidateInvariants();
         return member;
     }
 
@@ -111,6 +113,7 @@ public sealed class Workspace : Entity
         _members.Remove(member);
         UpdatedAt = DateTime.UtcNow;
         Raise(new MemberRemovedEvent(Id, userId));
+        ValidateInvariants();
     }
 
     /// <summary>Changes a member's role. The Owner's role cannot be changed (use ownership transfer).</summary>
@@ -131,6 +134,7 @@ public sealed class Workspace : Entity
         member.ChangeRole(newRole);
         UpdatedAt = DateTime.UtcNow;
         Raise(new MemberRoleChangedEvent(Id, userId, newRole));
+        ValidateInvariants();
     }
 
     // ── Authorization rules (the source of truth) ────────────────────────────
@@ -177,6 +181,17 @@ public sealed class Workspace : Entity
     {
         if (!CanWrite(userId))
             throw new ForbiddenException("This action requires write access.");
+    }
+
+    private void ValidateInvariants()
+    {
+        var ownerMember = _members.FirstOrDefault(m => m.UserId == OwnerId);
+        if (ownerMember is null || ownerMember.Role != WorkspaceMemberRole.Owner)
+            throw new DomainException("Workspace invariant violated: owner must have Owner role.");
+
+        var ownerCount = _members.Count(m => m.Role == WorkspaceMemberRole.Owner);
+        if (ownerCount != 1)
+            throw new DomainException("Workspace invariant violated: exactly one Owner is required.");
     }
 
     private static void ValidateName(string name)

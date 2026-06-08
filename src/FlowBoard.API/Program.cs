@@ -1,5 +1,8 @@
+using System.Net;
 using System.Threading.RateLimiting;
+using FlowBoard.API.Configuration;
 using FlowBoard.API.Middleware;
+using FlowBoard.API.OpenApi;
 using FlowBoard.API.Services;
 using FlowBoard.Application;
 using FlowBoard.Application.Common.Interfaces;
@@ -12,29 +15,33 @@ using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ── Application + Infrastructure layers ──────────────────────────────────────
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddJwtBearerProblemDetails();
 
-// ── API layer ─────────────────────────────────────────────────────────────────
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
-// Health checks: liveness (always 200) + readiness (includes DB)
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<FlowBoardDbContext>(
         name: "database",
         tags: ["ready"]);
 
-// OpenAPI / Scalar
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options => OpenApiConfiguration.Configure(options));
 
-// Rate limiting — protects auth endpoints from brute force and enumeration.
-// 5 requests per minute per IP for the "auth" policy.
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        await ProblemDetailsWriter.WriteAsync(
+            context.HttpContext,
+            StatusCodes.Status429TooManyRequests,
+            "Too many requests",
+            "Rate limit exceeded. Try again later.");
+    };
+
     options.AddPolicy("auth", context =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -46,7 +53,6 @@ builder.Services.AddRateLimiter(options =>
             }));
 });
 
-// CORS — wildcard only in development; production must set AllowedOrigins in config
 builder.Services.AddCors(options =>
 {
     if (builder.Environment.IsDevelopment())
@@ -65,18 +71,27 @@ builder.Services.AddCors(options =>
     }
 });
 
-// Forwarded headers — required when running behind a reverse proxy / TLS terminator
-builder.Services.Configure<ForwardedHeadersOptions>(options =>
+var forwardedHeadersEnabled = builder.Configuration.GetValue("ForwardedHeaders:Enabled", false);
+if (forwardedHeadersEnabled)
 {
-    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-    options.KnownIPNetworks.Clear();
-    options.KnownProxies.Clear();
-});
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
+        var knownProxies = builder.Configuration.GetSection("ForwardedHeaders:KnownProxies").Get<string[]>() ?? [];
+        foreach (var proxy in knownProxies)
+        {
+            if (IPAddress.TryParse(proxy, out var address))
+                options.KnownProxies.Add(address);
+        }
+    });
+}
 
 var app = builder.Build();
 
-// ── Middleware pipeline ───────────────────────────────────────────────────────
-app.UseForwardedHeaders();
+if (forwardedHeadersEnabled)
+    app.UseForwardedHeaders();
+
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 if (app.Environment.IsDevelopment())
@@ -84,7 +99,6 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.MapScalarApiReference();
 
-    // Auto-apply migrations in development. Production uses an explicit migration job.
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<FlowBoardDbContext>();
     await db.Database.MigrateAsync();
@@ -94,7 +108,6 @@ else
     app.UseHsts();
 }
 
-// Security headers — applied to every response
 app.Use(async (context, next) =>
 {
     context.Response.Headers["X-Content-Type-Options"] = "nosniff";
@@ -111,13 +124,11 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Liveness — does not check dependencies, just confirms the process is up
 app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
     Predicate = _ => false
 });
 
-// Readiness — checks DB connectivity
 app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("ready")

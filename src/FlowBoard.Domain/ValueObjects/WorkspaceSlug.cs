@@ -43,7 +43,10 @@ public sealed partial class WorkspaceSlug : ValueObject
         if (slug.Length > 60)
             slug = slug[..60].TrimEnd('-');
 
-        return new WorkspaceSlug(slug);
+        if (slug.Length < 3 || !SlugRegex().IsMatch(slug))
+            slug = $"ws-{Guid.NewGuid():N}"[..12];
+
+        return Create(slug);
     }
 
     /// <summary>Bypasses validation — used by EF Core value converter for materialization.</summary>

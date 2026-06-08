@@ -2,9 +2,9 @@
 
 [![CI](https://github.com/Drakonchik1/FlowBoard/actions/workflows/ci.yml/badge.svg)](https://github.com/Drakonchik1/FlowBoard/actions/workflows/ci.yml)
 
-Real-time multi-user project management SaaS — a full-stack flagship portfolio project. **Shipped today:** Clean Architecture, MediatR pipelines, JWT auth with family-based refresh-token rotation, EF Core, Workspaces + RBAC, Docker, CI.
+ASP.NET Core 10 API portfolio project: **Clean Architecture**, **JWT auth with family-based refresh rotation**, **workspace RBAC**, **104 unit tests**, and **Docker** local dev stack.
 
-**Planned (roadmap):** SignalR, Redis, Hangfire, Dapper read model, TestContainers, production deploy.
+**Current scope (Sprints 1–2):** user authentication and multi-tenant workspaces with role-based access control.
 
 ## Tech Stack
 
@@ -19,21 +19,20 @@ Real-time multi-user project management SaaS — a full-stack flagship portfolio
 | Auth | JWT (15 min access) + Refresh tokens (7 days, family-based rotation) |
 | Hashing | BCrypt (work factor 12), SHA-256 for refresh-token storage |
 | Rate limiting | ASP.NET Core fixed-window limiter on auth endpoints |
-| API docs | Scalar (OpenAPI) |
-| Tests | xUnit + Moq |
-| CI | GitHub Actions (build + test) |
+| API docs | Scalar (OpenAPI) with JWT Bearer scheme |
+| Tests | xUnit + Moq (104 unit tests) |
 
 ## Project Structure
 
 ```
 src/
-├── FlowBoard.Domain/          Entities, value objects, domain events, repository interfaces. Zero NuGet dependencies.
-├── FlowBoard.Application/     CQRS commands/queries/handlers, validators, MediatR behaviors. Depends on Domain only.
-├── FlowBoard.Infrastructure/  EF Core, repositories, JWT, BCrypt, migrations. Depends on Application + Domain.
-└── FlowBoard.API/             Controllers, middleware, security headers, health checks, Program.cs.
+  FlowBoard.Domain/          Entities, value objects, domain events. Zero NuGet dependencies.
+  FlowBoard.Application/     CQRS commands/queries, validators, MediatR behaviors.
+  FlowBoard.Infrastructure/  EF Core, repositories, JWT, BCrypt, migrations.
+  FlowBoard.API/             Controllers, middleware, security headers, health checks.
 
 tests/
-└── FlowBoard.UnitTests/       Handler tests with mocked repositories + domain entity tests.
+  FlowBoard.UnitTests/       Handler and domain tests with mocked repositories.
 ```
 
 ## Running Locally
@@ -41,22 +40,16 @@ tests/
 ### Prerequisites
 
 - .NET 10 SDK
-- Docker Desktop (only for SQL Server in Docker)
-- `dotnet-ef` global tool: `dotnet tool install --global dotnet-ef`
+- Docker Desktop (for SQL Server)
+- Optional: `dotnet tool install --global dotnet-ef` (manual migrations only)
 
 ### 1. Set local secrets
-
-The repo intentionally ships **no** credentials. Set them via `dotnet user-secrets`:
 
 ```pwsh
 dotnet user-secrets init --project src/FlowBoard.API
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=localhost,1433;Database=FlowBoard;User Id=sa;Password=YOUR_PASSWORD;TrustServerCertificate=True;" --project src/FlowBoard.API
 dotnet user-secrets set "Jwt:SecretKey" "REPLACE_WITH_AT_LEAST_32_RANDOM_CHARS" --project src/FlowBoard.API
 ```
-
-Alternatively, copy `src/FlowBoard.API/secrets.example.json` to `secrets.json` (git-ignored) and fill in values.
-
-The startup guard rejects JWT keys shorter than 32 characters with a clear error — do not hand-edit `appsettings.json` to "fix" that error; it lives in user-secrets by design.
 
 ### 2. Start SQL Server
 
@@ -70,23 +63,62 @@ docker compose up -d sqlserver
 dotnet run --project src/FlowBoard.API
 ```
 
-Migrations apply automatically in Development. Browse `/scalar/v1` for the API explorer.
+- Local URL: `http://localhost:5248` (see `launchSettings.json`)
+- API explorer: `/scalar/v1`
+- Migrations apply automatically in Development
 
-Use `src/FlowBoard.API/FlowBoard.API.http` for a ready-made register → login → workspace flow (VS Code / Rider REST Client).
-
-## Running with Docker Compose
-
-Copy `.env.example` to `.env` and replace the values:
+## Docker Compose (dev stack)
 
 ```pwsh
 Copy-Item .env.example .env
-# Edit .env
+# Edit .env with strong passwords
 docker compose up
 ```
 
-Compose substitutes `${MSSQL_SA_PASSWORD}` and `${JWT_SECRET_KEY}` from `.env`. The API container runs migrations and starts on `http://localhost:5000`.
+- API URL: `http://localhost:5000`
+- **Development mode** in compose (OpenAPI, auto-migrate, permissive CORS) — not for production
 
-> Docker Compose is for **local development only** — it runs the API in Development mode with permissive CORS and exposed SQL port.
+## Auth API
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/auth/register` | Create account, return tokens |
+| POST | `/api/auth/login` | Login (generic 401 on failure) |
+| POST | `/api/auth/refresh` | Rotate refresh token |
+| POST | `/api/auth/logout` | Revoke refresh token (idempotent) |
+
+All auth endpoints: **5 requests/minute per IP**.
+
+## Workspaces API
+
+All endpoints require `Authorization: Bearer <access_token>`.
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/workspaces` | Create workspace (caller becomes Owner) |
+| GET | `/api/workspaces` | List my workspaces |
+| GET | `/api/workspaces/{id}` | Get workspace + members (members only; 404 for outsiders) |
+| PATCH | `/api/workspaces/{id}` | Rename workspace — **name only** (Admin+) |
+| DELETE | `/api/workspaces/{id}` | Soft-delete (Owner only) |
+| POST | `/api/workspaces/{id}/members` | Invite by **UserId** + role (Admin+) |
+| DELETE | `/api/workspaces/{id}/members/{userId}` | Remove member or leave workspace |
+| PATCH | `/api/workspaces/{id}/members/{userId}` | Change role (Admin+) |
+
+**Roles:** Owner > Admin > Member > Viewer
+
+**Invite payload:** `{ "userId": "<guid>", "role": "Member" }`
+
+Non-members receive **404** (not 403) on all workspace endpoints to prevent ID enumeration.
+
+## Security Properties
+
+- BCrypt passwords, SHA-256 hashed refresh tokens
+- Family-based refresh rotation with reuse detection (revoked tokens only)
+- Constant-time login (dummy BCrypt verify when user missing)
+- Rate limiting on auth endpoints
+- RFC 7807 Problem Details + traceId on all errors (including JWT challenges)
+- Security headers, HSTS in non-Development
+- Forwarded headers **disabled by default** — enable via `ForwardedHeaders:Enabled` in production config
 
 ## Tests
 
@@ -94,64 +126,21 @@ Compose substitutes `${MSSQL_SA_PASSWORD}` and `${JWT_SECRET_KEY}` from `.env`. 
 dotnet test
 ```
 
-Unit tests use mocked dependencies — no Docker required, sub-second feedback. TestContainers integration tests start in Sprint 3.
+**104 unit tests** — mocked repositories, sub-second feedback. TestContainers integration tests planned for Sprint 3.
 
-## Auth Flow
+## Roadmap
 
-`POST /api/auth/register` — creates a user, returns access token + refresh token + user details.
-`POST /api/auth/login` — verifies credentials, returns the same payload.
-`POST /api/auth/refresh` — rotates the refresh token. Reuse of a previously-rotated token triggers full family revocation (all sessions on that login chain are invalidated).
-`POST /api/auth/logout` — revokes the current refresh token. Idempotent.
+| Sprint | Status | Deliverable |
+|---|---|---|
+| 1 | Done | Auth |
+| 2 | Done | Workspaces + RBAC |
+| 3 | Planned | Boards + Cards + Dapper + TestContainers |
+| 4 | Planned | SignalR real-time |
+| 5 | Planned | Redis caching |
+| 6 | Planned | Comments + Tags |
+| 7 | Planned | Hangfire + activity log |
+| 8 | Planned | Production CI/CD hardening |
 
-All four endpoints are protected by a 5-requests-per-minute fixed-window rate limit per IP.
+## License
 
-## Security Properties
-
-- **Passwords** never stored in plaintext (BCrypt, work factor 12).
-- **Refresh tokens** never stored in plaintext (SHA-256 hash; only the hash hits the DB).
-- **Token rotation** with family-based reuse detection: a leaked-and-rotated token presented again invalidates the entire login session.
-- **Generic 401** on login failure and **generic message** on duplicate registration prevent user enumeration.
-- **Rate limiting** on every auth endpoint defends against brute force and credential stuffing.
-- **JWT key length** enforced at startup (>= 32 chars).
-- **CORS** wildcard only in Development; production reads `AllowedOrigins` from configuration.
-- **Security headers** on every response: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`.
-- **Forwarded headers** middleware for correct client IP / scheme behind a reverse proxy.
-- **HSTS** enabled in non-development environments.
-- **Trace ID** included in every error response for log correlation.
-
-See [SECURITY.md](SECURITY.md) for the vulnerability reporting policy.
-
-## Health Checks
-
-- `GET /health/live` — process liveness, no dependencies checked.
-- `GET /health/ready` — readiness, includes DB connectivity.
-
-## Workspaces API
-
-All endpoints require a valid JWT (`[Authorize]`).
-
-| Method | Endpoint | Description | Required role |
-|--------|----------|-------------|---------------|
-| `POST` | `/api/workspaces` | Create workspace (caller becomes Owner) | Authenticated |
-| `GET` | `/api/workspaces` | List workspaces the current user belongs to | Authenticated |
-| `GET` | `/api/workspaces/{id}` | Get workspace details + members | Member |
-| `PATCH` | `/api/workspaces/{id}` | Update name | Admin+ |
-| `DELETE` | `/api/workspaces/{id}` | Soft-delete | Owner |
-| `POST` | `/api/workspaces/{id}/members` | Invite member by `userId` | Admin+ |
-| `DELETE` | `/api/workspaces/{id}/members/{userId}` | Remove member or leave workspace | Admin+ (or self) |
-| `PATCH` | `/api/workspaces/{id}/members/{userId}` | Change member role | Admin+ |
-
-Roles: **Owner** > **Admin** > **Member** > **Viewer**. Authorization is enforced in the `Workspace` domain aggregate (`EnsureMember`, `EnsureAdmin`, `EnsureOwner`, `EnsureCanWrite`). Non-members receive **404** (not 403) on workspace lookup to prevent ID enumeration.
-
-## Sprint Status
-
-**Completed:** Sprint 1 (Auth), Sprint 2 (Workspaces + RBAC), Docker local stack, GitHub Actions CI.
-
-**Remaining sprints:**
-
-3. Boards + Cards + Dapper read model + TestContainers
-4. Real-time SignalR
-5. Redis caching
-6. Comments + Tags + async email
-7. Hangfire migration + activity log
-8. Production deploy + hardened ops config
+MIT — see [LICENSE](LICENSE).

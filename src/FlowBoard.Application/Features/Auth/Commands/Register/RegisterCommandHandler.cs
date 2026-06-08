@@ -9,7 +9,7 @@ namespace FlowBoard.Application.Features.Auth.Commands.Register;
 
 /// <summary>
 /// Creates a new user, hashes the password, issues JWT + refresh token.
-/// Returns a generic validation error if the email is already taken (no enumeration).
+/// Returns 409 with a generic message if the email is already taken (anti-enumeration).
 /// </summary>
 public sealed class RegisterCommandHandler(
     IUserRepository userRepository,
@@ -22,7 +22,8 @@ public sealed class RegisterCommandHandler(
     {
         var emailExists = await userRepository.ExistsByEmailAsync(request.Email, cancellationToken);
         if (emailExists)
-            throw new ValidationException([new ValidationError("", "Registration could not be completed. Please try a different email or log in.")]);
+            throw new ConflictException(
+                "Registration could not be completed. If you already have an account, try logging in.");
 
         var passwordHash = passwordService.Hash(request.Password);
         var user = User.Create(request.Email, request.FullName, passwordHash);

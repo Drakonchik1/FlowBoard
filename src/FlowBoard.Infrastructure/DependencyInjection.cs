@@ -1,3 +1,4 @@
+using System.Text;
 using FlowBoard.Application.Common.Interfaces;
 using FlowBoard.Domain.Interfaces;
 using FlowBoard.Infrastructure.Persistence;
@@ -8,7 +9,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
 
 namespace FlowBoard.Infrastructure;
 
@@ -18,24 +18,20 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // Database
         services.AddDbContext<FlowBoardDbContext>(options =>
             options.UseSqlServer(
                 configuration.GetConnectionString("DefaultConnection"),
                 sqlOptions => sqlOptions.EnableRetryOnFailure(3)));
 
-        // Repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IWorkspaceRepository, WorkspaceRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-        // Services
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IPasswordService, PasswordService>();
 
-        // JWT Authentication
         var jwtSettings = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
             ?? throw new InvalidOperationException("JWT settings are missing from configuration.");
 

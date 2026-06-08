@@ -5,6 +5,8 @@
 
 # dotenv files
 .env
+.env.*
+!.env.example
 
 # Local dev config (use user-secrets or secrets.example.json)
 **/appsettings.Development.json

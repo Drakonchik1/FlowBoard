@@ -1,18 +1,17 @@
 # Security Policy
 
+## Supported Versions
+
+Only the latest commit on `master` is supported.
+
 ## Reporting a Vulnerability
 
-If you discover a security issue, please email **pavlo.dorofieiev@gmail.com** rather than opening a public issue.
+Email: pavlo.dorofieiev@gmail.com
 
-## Credential hygiene
+Please include steps to reproduce and impact assessment. Expect a response within 7 days.
 
-This repository intentionally ships **no real secrets**. Use:
+## Credential Hygiene
 
-- `dotnet user-secrets` for local development
-- `.env` (from `.env.example`) for Docker Compose
-
-Never commit `.env`, `secrets.json`, or `appsettings.Development.json`.
-
-## History note
-
-Commits before the June 2026 public-release rewrite may have contained **example dev placeholders** in git history. If you cloned an older revision, do not reuse any credentials found there — generate fresh values for every environment.
+- Never commit `.env`, `secrets.json`, or `appsettings.Development.json`
+- Use `dotnet user-secrets` locally and environment variables in Docker/production
+- Rotate JWT secret and database passwords if you suspect exposure

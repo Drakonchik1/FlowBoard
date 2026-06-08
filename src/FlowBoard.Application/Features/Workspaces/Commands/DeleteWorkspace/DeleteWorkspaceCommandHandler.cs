@@ -19,7 +19,7 @@ public sealed class DeleteWorkspaceCommandHandler(
         var workspace = await workspaceRepository.GetByIdWithMembersAsync(request.WorkspaceId, cancellationToken)
             ?? throw new NotFoundException("Workspace", request.WorkspaceId);
 
-        workspace.EnsureOwner(userId);
+        WorkspaceAccess.EnsureOwnerOrNotFound(workspace, userId, request.WorkspaceId);
         workspace.SoftDelete();
 
         await unitOfWork.SaveChangesAsync(cancellationToken);

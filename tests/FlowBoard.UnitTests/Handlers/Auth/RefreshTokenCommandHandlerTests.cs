@@ -56,7 +56,7 @@ public sealed class RefreshTokenCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ExpiredTokenPresented_RevokesFamilyAndThrows()
+    public async Task Handle_ExpiredTokenPresented_DoesNotRevokeFamilyAndThrows()
     {
         var expired = RefreshToken.CreateNew(Guid.NewGuid(), TokenHasher.Hash("any"), DateTime.UtcNow.AddDays(-1));
 
@@ -66,7 +66,8 @@ public sealed class RefreshTokenCommandHandlerTests
         await Assert.ThrowsAsync<UnauthorizedException>(() =>
             CreateHandler().Handle(new RefreshTokenCommand("any"), CancellationToken.None));
 
-        _refreshTokenRepo.Verify(r => r.RevokeEntireFamilyAsync(expired.FamilyId, It.IsAny<CancellationToken>()), Times.Once);
+        _refreshTokenRepo.Verify(r => r.RevokeEntireFamilyAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

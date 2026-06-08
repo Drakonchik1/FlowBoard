@@ -19,8 +19,8 @@ public sealed class ChangeMemberRoleCommandHandler(
         var workspace = await workspaceRepository.GetByIdWithMembersAsync(request.WorkspaceId, cancellationToken)
             ?? throw new NotFoundException("Workspace", request.WorkspaceId);
 
-        workspace.EnsureAdmin(actorId);
-        workspace.ChangeMemberRole(request.UserId, request.NewRole);
+        WorkspaceAccess.EnsureAdminOrNotFound(workspace, actorId, request.WorkspaceId);
+        workspace.ChangeMemberRole(request.UserId, WorkspaceRoleMapper.ToDomain(request.NewRole));
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 

@@ -1,4 +1,3 @@
-using FlowBoard.Application.Common.Exceptions;
 using FlowBoard.Application.Common.Interfaces;
 using FlowBoard.Application.Features.Workspaces.Commands.RemoveMember;
 using FlowBoard.Domain.Entities;
@@ -19,19 +18,20 @@ public sealed class RemoveMemberCommandHandlerTests
         new(_workspaceRepo.Object, _unitOfWork.Object, _currentUser.Object);
 
     [Fact]
-    public async Task Handle_SelfLeave_RemovesMember()
+    public async Task Handle_MemberLeaves_RemovesSelf()
     {
         var ownerId = Guid.NewGuid();
         var memberId = Guid.NewGuid();
         var workspace = Workspace.Create("Acme", WorkspaceSlug.Create("acme"), ownerId);
         workspace.InviteMember(memberId, WorkspaceMemberRole.Member);
+
         _currentUser.Setup(c => c.UserId).Returns(memberId);
         _workspaceRepo.Setup(r => r.GetByIdWithMembersAsync(workspace.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(workspace);
 
         await CreateHandler().Handle(new RemoveMemberCommand(workspace.Id, memberId), CancellationToken.None);
 
-        Assert.False(workspace.HasMember(memberId));
+        Assert.DoesNotContain(workspace.Members, m => m.UserId == memberId);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -39,34 +39,34 @@ public sealed class RemoveMemberCommandHandlerTests
     public async Task Handle_AdminRemovesOther_RemovesMember()
     {
         var ownerId = Guid.NewGuid();
-        var adminId = Guid.NewGuid();
         var memberId = Guid.NewGuid();
         var workspace = Workspace.Create("Acme", WorkspaceSlug.Create("acme"), ownerId);
-        workspace.InviteMember(adminId, WorkspaceMemberRole.Admin);
         workspace.InviteMember(memberId, WorkspaceMemberRole.Member);
-        _currentUser.Setup(c => c.UserId).Returns(adminId);
+
+        _currentUser.Setup(c => c.UserId).Returns(ownerId);
         _workspaceRepo.Setup(r => r.GetByIdWithMembersAsync(workspace.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(workspace);
 
         await CreateHandler().Handle(new RemoveMemberCommand(workspace.Id, memberId), CancellationToken.None);
 
-        Assert.False(workspace.HasMember(memberId));
+        Assert.DoesNotContain(workspace.Members, m => m.UserId == memberId);
     }
 
     [Fact]
-    public async Task Handle_MemberRemovesOther_Throws403()
+    public async Task Handle_NonAdminRemovesOther_Returns404()
     {
         var ownerId = Guid.NewGuid();
-        var memberA = Guid.NewGuid();
-        var memberB = Guid.NewGuid();
+        var memberId = Guid.NewGuid();
+        var otherMemberId = Guid.NewGuid();
         var workspace = Workspace.Create("Acme", WorkspaceSlug.Create("acme"), ownerId);
-        workspace.InviteMember(memberA, WorkspaceMemberRole.Member);
-        workspace.InviteMember(memberB, WorkspaceMemberRole.Member);
-        _currentUser.Setup(c => c.UserId).Returns(memberA);
+        workspace.InviteMember(memberId, WorkspaceMemberRole.Member);
+        workspace.InviteMember(otherMemberId, WorkspaceMemberRole.Member);
+
+        _currentUser.Setup(c => c.UserId).Returns(memberId);
         _workspaceRepo.Setup(r => r.GetByIdWithMembersAsync(workspace.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(workspace);
 
-        await Assert.ThrowsAsync<ForbiddenException>(() =>
-            CreateHandler().Handle(new RemoveMemberCommand(workspace.Id, memberB), CancellationToken.None));
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            CreateHandler().Handle(new RemoveMemberCommand(workspace.Id, otherMemberId), CancellationToken.None));
     }
 }

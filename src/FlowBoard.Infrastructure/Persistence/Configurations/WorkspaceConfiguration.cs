@@ -23,10 +23,17 @@ internal sealed class WorkspaceConfiguration : IEntityTypeConfiguration<Workspac
             .HasMaxLength(60)
             .IsRequired();
 
-        builder.HasIndex(w => w.Slug).IsUnique();
+        builder.HasIndex(w => w.Slug)
+            .IsUnique()
+            .HasFilter("[IsDeleted] = 0");
         builder.HasIndex(w => w.OwnerId);
 
         builder.Property(w => w.OwnerId).IsRequired();
+
+        builder.HasOne<User>()
+            .WithMany()
+            .HasForeignKey(w => w.OwnerId)
+            .OnDelete(DeleteBehavior.Restrict);
         builder.Property(w => w.IsDeleted).HasDefaultValue(false).IsRequired();
         builder.Property(w => w.CreatedAt).IsRequired();
         builder.Property(w => w.UpdatedAt).IsRequired();

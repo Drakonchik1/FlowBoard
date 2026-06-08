@@ -21,12 +21,14 @@ public sealed class WorkspacesController(ISender sender) : ControllerBase
     /// <summary>List all workspaces the authenticated user belongs to.</summary>
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<WorkspaceDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetMyWorkspaces(CancellationToken cancellationToken) =>
         Ok(await sender.Send(new GetMyWorkspacesQuery(), cancellationToken));
 
     /// <summary>Get full workspace details including members. Members only.</summary>
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(WorkspaceDetailDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Get(Guid id, CancellationToken cancellationToken) =>
         Ok(await sender.Send(new GetWorkspaceByIdQuery(id), cancellationToken));
@@ -34,6 +36,8 @@ public sealed class WorkspacesController(ISender sender) : ControllerBase
     /// <summary>Create a new workspace. Caller becomes the Owner.</summary>
     [HttpPost]
     [ProducesResponseType(typeof(WorkspaceDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> Create(
         [FromBody] CreateWorkspaceCommand command,
@@ -43,10 +47,11 @@ public sealed class WorkspacesController(ISender sender) : ControllerBase
         return CreatedAtAction(nameof(Get), new { id = workspace.Id }, workspace);
     }
 
-    /// <summary>Rename a workspace. Owner or Admin only.</summary>
+    /// <summary>Rename a workspace (name only). Owner or Admin only.</summary>
     [HttpPatch("{id:guid}")]
     [ProducesResponseType(typeof(WorkspaceDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(
         Guid id,
         [FromBody] UpdateWorkspacePayload payload,
@@ -59,17 +64,20 @@ public sealed class WorkspacesController(ISender sender) : ControllerBase
     /// <summary>Soft-delete a workspace. Owner only.</summary>
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         await sender.Send(new DeleteWorkspaceCommand(id), cancellationToken);
         return NoContent();
     }
 
-    /// <summary>Invite a user as a member with the given role. Owner or Admin only.</summary>
+    /// <summary>Invite a user by UserId with the given role. Owner or Admin only.</summary>
     [HttpPost("{id:guid}/members")]
     [ProducesResponseType(typeof(WorkspaceMemberDto), StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> InviteMember(
         Guid id,
         [FromBody] InviteMemberPayload payload,
@@ -83,7 +91,8 @@ public sealed class WorkspacesController(ISender sender) : ControllerBase
     /// <summary>Remove a member, or leave the workspace by passing your own UserId.</summary>
     [HttpDelete("{id:guid}/members/{userId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RemoveMember(
         Guid id, Guid userId, CancellationToken cancellationToken)
     {
@@ -94,7 +103,8 @@ public sealed class WorkspacesController(ISender sender) : ControllerBase
     /// <summary>Change a member's role. Owner or Admin only.</summary>
     [HttpPatch("{id:guid}/members/{userId:guid}")]
     [ProducesResponseType(typeof(WorkspaceMemberDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ChangeMemberRole(
         Guid id, Guid userId,
         [FromBody] ChangeMemberRolePayload payload,
@@ -106,7 +116,6 @@ public sealed class WorkspacesController(ISender sender) : ControllerBase
     }
 }
 
-// Request payloads — kept separate from commands so the wire format can evolve independently
 public sealed record UpdateWorkspacePayload(string Name);
-public sealed record InviteMemberPayload(Guid UserId, FlowBoard.Domain.Entities.WorkspaceMemberRole Role);
-public sealed record ChangeMemberRolePayload(FlowBoard.Domain.Entities.WorkspaceMemberRole NewRole);
+public sealed record InviteMemberPayload(Guid UserId, WorkspaceRole Role);
+public sealed record ChangeMemberRolePayload(WorkspaceRole NewRole);

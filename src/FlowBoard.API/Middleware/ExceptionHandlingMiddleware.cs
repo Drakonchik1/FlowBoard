@@ -9,7 +9,7 @@ namespace FlowBoard.API.Middleware;
 /// <summary>
 /// Global exception handler that converts exceptions to RFC 7807 Problem Details responses.
 /// Every response carries a traceId so a developer can correlate it with the log line
-/// that captured the same exception. Registered first so it wraps everything.
+/// that captured the same exception.
 /// </summary>
 public sealed class ExceptionHandlingMiddleware(
     RequestDelegate next,
@@ -29,7 +29,14 @@ public sealed class ExceptionHandlingMiddleware(
         catch (Exception ex)
         {
             var traceId = Activity.Current?.Id ?? context.TraceIdentifier;
-            logger.LogError(ex, "Unhandled exception. TraceId={TraceId}", traceId);
+            var isExpected = ex is ValidationException or UnauthorizedException or ForbiddenException
+                or NotFoundException or DomainException or ConflictException;
+
+            if (isExpected)
+                logger.LogWarning(ex, "Request failed with expected error. TraceId={TraceId}", traceId);
+            else
+                logger.LogError(ex, "Unhandled exception. TraceId={TraceId}", traceId);
+
             await HandleExceptionAsync(context, ex, traceId);
         }
     }
@@ -52,6 +59,15 @@ public sealed class ExceptionHandlingMiddleware(
                                 g => g.Key,
                                 g => g.Select(e => e.ErrorMessage).ToArray())
                     }
+                }),
+
+            ConflictException conflictEx => (
+                StatusCodes.Status409Conflict,
+                new ProblemDetails
+                {
+                    Title = "Conflict",
+                    Detail = conflictEx.Message,
+                    Status = StatusCodes.Status409Conflict
                 }),
 
             DomainException domainEx => (

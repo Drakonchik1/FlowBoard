@@ -1,4 +1,6 @@
+using FlowBoard.Application.Common.Exceptions;
 using FlowBoard.Application.Common.Interfaces;
+using FlowBoard.Application.Features.Workspaces;
 using FlowBoard.Application.Features.Workspaces.Commands.InviteMember;
 using FlowBoard.Domain.Entities;
 using FlowBoard.Domain.Exceptions;
@@ -37,7 +39,7 @@ public sealed class InviteMemberCommandHandlerTests
             .ReturnsAsync(workspace);
 
         var result = await CreateHandler().Handle(
-            new InviteMemberCommand(workspace.Id, invitee.Id, WorkspaceMemberRole.Member),
+            new InviteMemberCommand(workspace.Id, invitee.Id, WorkspaceRole.Member),
             CancellationToken.None);
 
         Assert.Equal(invitee.Id, result.UserId);
@@ -47,7 +49,7 @@ public sealed class InviteMemberCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_NonAdminInvites_ThrowsForbidden()
+    public async Task Handle_NonAdminInvites_ThrowsNotFoundToPreventEnumeration()
     {
         var ownerId = Guid.NewGuid();
         var nonAdminId = Guid.NewGuid();
@@ -60,9 +62,9 @@ public sealed class InviteMemberCommandHandlerTests
         _workspaceRepo.Setup(r => r.GetByIdWithMembersAsync(workspace.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(workspace);
 
-        await Assert.ThrowsAsync<ForbiddenException>(() =>
+        await Assert.ThrowsAsync<NotFoundException>(() =>
             CreateHandler().Handle(
-                new InviteMemberCommand(workspace.Id, invitee.Id, WorkspaceMemberRole.Member),
+                new InviteMemberCommand(workspace.Id, invitee.Id, WorkspaceRole.Member),
                 CancellationToken.None));
     }
 
@@ -75,7 +77,7 @@ public sealed class InviteMemberCommandHandlerTests
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             CreateHandler().Handle(
-                new InviteMemberCommand(Guid.NewGuid(), Guid.NewGuid(), WorkspaceMemberRole.Member),
+                new InviteMemberCommand(Guid.NewGuid(), Guid.NewGuid(), WorkspaceRole.Member),
                 CancellationToken.None));
     }
 
@@ -90,7 +92,7 @@ public sealed class InviteMemberCommandHandlerTests
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             CreateHandler().Handle(
-                new InviteMemberCommand(Guid.NewGuid(), Guid.NewGuid(), WorkspaceMemberRole.Member),
+                new InviteMemberCommand(Guid.NewGuid(), Guid.NewGuid(), WorkspaceRole.Member),
                 CancellationToken.None));
     }
 }
