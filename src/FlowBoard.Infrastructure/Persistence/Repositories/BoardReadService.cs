@@ -17,13 +17,11 @@ internal sealed class BoardReadService(ISqlConnectionFactory connectionFactory) 
 
         SELECT [Id], [BoardId], [Name], [Position], [CreatedAt], [UpdatedAt]
         FROM [board_lists]
-        WHERE [BoardId] = @BoardId AND [IsDeleted] = 0
-        ORDER BY [Position];
+        WHERE [BoardId] = @BoardId AND [IsDeleted] = 0;
 
         SELECT [Id], [BoardListId], [BoardId], [Title], [Description], [Position], [Priority], [CreatedAt], [UpdatedAt]
         FROM [cards]
-        WHERE [BoardId] = @BoardId AND [IsDeleted] = 0
-        ORDER BY [Position];
+        WHERE [BoardId] = @BoardId AND [IsDeleted] = 0;
         """;
 
     public async Task<BoardViewDto?> GetBoardAsync(Guid boardId, CancellationToken cancellationToken = default)
@@ -37,7 +35,9 @@ internal sealed class BoardReadService(ISqlConnectionFactory connectionFactory) 
         if (board is null)
             return null;
 
-        var listRows = (await multi.ReadAsync<ListRow>()).ToList();
+        var listRows = (await multi.ReadAsync<ListRow>())
+            .OrderBy(l => l.Position, StringComparer.Ordinal)
+            .ToList();
         var cardRows = (await multi.ReadAsync<CardRow>()).ToList();
 
         var cardsByList = cardRows
@@ -45,6 +45,7 @@ internal sealed class BoardReadService(ISqlConnectionFactory connectionFactory) 
             .ToDictionary(
                 g => g.Key,
                 g => (IReadOnlyList<CardViewDto>)g
+                    .OrderBy(c => c.Position, StringComparer.Ordinal)
                     .Select(c => new CardViewDto(
                         c.Id, c.BoardListId, c.Title, c.Description, c.Position, c.Priority, c.CreatedAt, c.UpdatedAt))
                     .ToList());

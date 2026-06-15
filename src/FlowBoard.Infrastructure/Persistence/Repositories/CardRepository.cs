@@ -9,20 +9,27 @@ internal sealed class CardRepository(FlowBoardDbContext context)
     : Repository<Card>(context), ICardRepository
 {
     public async Task<IReadOnlyList<Card>> GetByListAsync(
-        Guid boardListId, CancellationToken cancellationToken = default) =>
-        await DbSet
+        Guid boardListId, CancellationToken cancellationToken = default)
+    {
+        var cards = await DbSet
             .Where(c => c.BoardListId == boardListId)
-            .OrderBy(c => c.Position)
             .ToListAsync(cancellationToken);
+
+        return cards
+            .OrderBy(c => c.Position.Value, StringComparer.Ordinal)
+            .ToList();
+    }
 
     public async Task<FractionalIndex?> GetLastPositionAsync(
         Guid boardListId, CancellationToken cancellationToken = default)
     {
-        var last = await DbSet
+        var cards = await DbSet
             .Where(c => c.BoardListId == boardListId)
-            .OrderByDescending(c => c.Position)
-            .FirstOrDefaultAsync(cancellationToken);
+            .ToListAsync(cancellationToken);
 
-        return last?.Position;
+        return cards
+            .OrderBy(c => c.Position.Value, StringComparer.Ordinal)
+            .LastOrDefault()
+            ?.Position;
     }
 }
