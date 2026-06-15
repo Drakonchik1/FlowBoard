@@ -42,6 +42,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
 
         var services = new ServiceCollection();
         services.AddLogging();
+        services.AddSingleton<IConfiguration>(configuration);
         services.AddApplication();
         services.AddInfrastructure(configuration);
         services.AddSingleton<ICurrentUserService>(CurrentUser);
