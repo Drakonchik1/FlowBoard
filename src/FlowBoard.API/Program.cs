@@ -22,15 +22,22 @@ builder.Services.AddJwtBearerProblemDetails();
 builder.Services.AddJwtBearerSignalR();
 
 builder.Services.AddControllers();
-builder.Services.AddSignalR();
+builder.Services.AddSignalRWithOptionalRedisBackplane(builder.Configuration);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddSingleton<IBoardRealtimeNotifier, BoardRealtimeNotifier>();
 
-builder.Services.AddHealthChecks()
+var redisConnection = builder.Configuration.GetRedisConnectionString();
+
+var healthChecks = builder.Services.AddHealthChecks()
     .AddDbContextCheck<FlowBoardDbContext>(
         name: "database",
         tags: ["ready"]);
+
+if (!string.IsNullOrWhiteSpace(redisConnection))
+{
+    healthChecks.AddRedis(redisConnection, name: "redis", tags: ["ready"]);
+}
 
 builder.Services.AddOpenApi(options => OpenApiConfiguration.Configure(options));
 

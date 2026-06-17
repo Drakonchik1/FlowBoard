@@ -20,6 +20,21 @@ services:
       start_period: 30s
     restart: unless-stopped
 
+  redis:
+    image: redis:7-alpine
+    container_name: flowboard-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
   api:
     build:
       context: .
@@ -27,6 +42,8 @@ services:
     container_name: flowboard-api
     depends_on:
       sqlserver:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Development
@@ -46,3 +63,4 @@ services:
 
 volumes:
   sqlserver_data:
+  redis_data:
