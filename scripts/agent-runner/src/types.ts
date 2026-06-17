@@ -31,7 +31,7 @@ export interface Task {
   title: string;
   status: TaskStatus;
   kind?: TaskKind;
-  /** When true, agent-runner commits and pushes to GitHub after this task is done. */
+  /** When true on a council verify task, force git publish even if id does not match convention. */
   gitPublish?: boolean;
   files: string[];
   doneWhen: string;

@@ -216,7 +216,6 @@
       "id": "close-docs",
       "phase": "closeout",
       "closesSprints": [1, 2, 3, 4, 5],
-      "gitPublish": true,
       "title": "Mark Sprints 1–5 fully closed in SPRINT.md + README",
       "status": "pending",
       "priority": "low",
@@ -240,7 +239,7 @@
       ],
       "doneWhen": "docs/council/closeout-report.md exists; open High/Medium items from sprint-5-report verified fixed or deferred with reason",
       "dontTouch": ["application code — report only", "auth behavior changes", "migrations"],
-      "notes": "Optional read-only verify after close-docs.",
+      "notes": "Re-verification after close-01…close-11 + close-docs. Agent-runner pushes to GitHub when this council signs off.",
       "council": {
         "outputFile": "docs/council/closeout-report.md",
         "workDir": "docs/council/.work",
@@ -362,7 +361,7 @@
       "files": ["src/", "tests/", "docker-compose.yml", "SECURITY.md", "SPRINT.md"],
       "doneWhen": "docs/council/sprint-6-report.md exists with prioritized findings and file:line refs",
       "dontTouch": ["application code — report only", "auth behavior changes", "migrations"],
-      "notes": "Read-only review after s6-07. Findings fixed in s6-council-fixes (git publish).",
+      "notes": "Read-only review after s6-07. Findings fixed in s6-council-fixes; git push after s6-council-verify.",
       "council": {
         "outputFile": "docs/council/sprint-6-report.md",
         "workDir": "docs/council/.work",
@@ -393,13 +392,56 @@
     {
       "id": "s6-council-fixes",
       "phase": "sprint6",
-      "gitPublish": true,
       "title": "Fix Sprint 6 council security and bug findings",
       "status": "pending",
       "files": ["src/", "tests/", "SPRINT.md", "README.md"],
       "doneWhen": "High/Medium findings from docs/council/sprint-6-report.md fixed or deferred with reason; dotnet test green",
       "dontTouch": ["auth rotation semantics", "migrations without approval"],
-      "notes": "Agent-runner commits and pushes to GitHub when this task is done."
+      "notes": "Local only — git push waits for s6-council-verify."
+    },
+    {
+      "id": "s6-council-verify",
+      "phase": "sprint6",
+      "kind": "council",
+      "title": "Live Council — Sprint 6 remediation verification",
+      "status": "pending",
+      "files": [
+        "src/",
+        "tests/",
+        "docs/council/sprint-6-report.md",
+        "SPRINT.md"
+      ],
+      "doneWhen": "docs/council/sprint-6-verify-report.md exists; High/Medium findings verified fixed or deferred; council signs off for publish",
+      "dontTouch": ["application code — report only unless blocker found", "auth behavior changes", "migrations"],
+      "notes": "Re-verification after s6-council-fixes. Agent-runner pushes full Sprint 6 work to GitHub when done.",
+      "council": {
+        "outputFile": "docs/council/sprint-6-verify-report.md",
+        "workDir": "docs/council/.work",
+        "members": [
+          {
+            "id": "bug-hunter",
+            "role": "Bug & logic reviewer",
+            "scope": "sprint",
+            "focus": "Verify s6-council-fixes addressed sprint-6-report items."
+          },
+          {
+            "id": "security-auditor",
+            "role": "Security reviewer",
+            "scope": "sprint",
+            "focus": "Re-check auth, RBAC, injection, secrets after remediation."
+          },
+          {
+            "id": "architecture-guard",
+            "role": "Architecture reviewer",
+            "scope": "sprint",
+            "focus": "Confirm fixes match conventions; no scope creep."
+          }
+        ],
+        "synthesizer": {
+          "role": "Council chair",
+          "focus": "Sign off Sprint 6 for GitHub publish or list remaining blockers."
+        }
+      }
     },
     {
       "id": "s6-docs",

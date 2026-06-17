@@ -12,7 +12,7 @@ alwaysApply: true
 3. Use `@` on specific files, not whole codebase.
 4. Run `dotnet test` before finishing.
 5. When done: update `tasks/queue.json` status, `HANDOFF.md`, and `SPRINT.md` session log.
-6. **Git push** only after council vulnerability fixes for a sprint — `close-docs`, `sN-council-fixes`, or `"gitPublish": true` in queue. Intermediate tasks stay local. Manual chat: you push on those publish tasks only.
+6. **Git push** only after council **re-verifies** all vulnerability fixes (`close-council`, `sN-council-verify`). Review → fix tasks → verify → one push. Manual chat: push only when verify council signs off.
 
 ## Stack
 

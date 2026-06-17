@@ -1,0 +1,40 @@
+{
+  "_comment": "Insert after sN-council-fixes. Read-only re-verification — agent-runner pushes to GitHub when this council signs off.",
+  "id": "sN-council-verify",
+  "phase": "sprintN",
+  "kind": "council",
+  "title": "Live Council — Sprint N remediation verification",
+  "status": "pending",
+  "files": ["src/", "tests/", "docs/council/sprint-N-report.md", "SPRINT.md"],
+  "doneWhen": "docs/council/sprint-N-verify-report.md exists; High/Medium findings verified fixed or deferred; council signs off for publish",
+  "dontTouch": ["application code — report only unless blocker found", "auth behavior changes", "migrations"],
+  "notes": "Git publish trigger — one push per sprint after full council remediation cycle.",
+  "council": {
+    "outputFile": "docs/council/sprint-N-verify-report.md",
+    "workDir": "docs/council/.work",
+    "members": [
+      {
+        "id": "bug-hunter",
+        "role": "Bug & logic reviewer",
+        "scope": "sprint",
+        "focus": "Verify sN-council-fixes addressed sprint-N-report items."
+      },
+      {
+        "id": "security-auditor",
+        "role": "Security reviewer",
+        "scope": "sprint",
+        "focus": "Re-check auth, RBAC, injection, secrets after remediation."
+      },
+      {
+        "id": "architecture-guard",
+        "role": "Architecture reviewer",
+        "scope": "sprint",
+        "focus": "Confirm fixes match conventions; no scope creep."
+      }
+    ],
+    "synthesizer": {
+      "role": "Council chair",
+      "focus": "Sign off Sprint N for GitHub publish or list remaining blockers."
+    }
+  }
+}

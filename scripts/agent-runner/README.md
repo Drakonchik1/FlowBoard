@@ -43,20 +43,16 @@ Docs: [cursor.com/docs/api/sdk/typescript](https://cursor.com/docs/api/sdk/types
 
 Each `Agent.create()` = **new agent** (fresh session). State carries forward via `HANDOFF.md`, `SPRINT.md`, `tasks/queue.json`.
 
-After a **git publish task** is marked **done** and tests pass, the runner **commits and pushes** to `origin/<current-branch>`.
+After a **council verify** task is marked **done**, the runner **commits and pushes** all accumulated sprint work to `origin/<current-branch>`.
 
-Publish tasks (council vulnerability remediation — not every queue item):
+| Task | When |
+|------|------|
+| `close-council` | Closeout re-verification (after close-01…close-11 + close-docs) |
+| `sN-council-verify` | Sprint N re-verification (after sN-council-fixes) |
 
-| Task pattern | When |
-|--------------|------|
-| `close-docs` | After close-01…close-11 fixes; closes Sprints 1–5 |
-| `sN-council-fixes` | After Sprint N council findings are fixed |
-| `"gitPublish": true` | Explicit flag in `tasks/queue.json` |
+**Cycle:** council review → fix tasks (local) → council verify → **one git push**.
 
-| Commit | Example |
-|--------|---------|
-| Closeout publish | `fix(closeout): Council vulnerability fixes — Sprints 1–5 closed` |
-| Sprint publish | `fix(s6-council-fixes): Fix Sprint 6 council security and bug findings` |
+If verify fails (`status: failed`), nothing is pushed until fixes land and verify is re-run.
 
 Overrides: `--force-git` (push any done task), `--skip-git` / `-SkipGit` (never push). Sensitive paths (`.env`, `secrets.json`) block the commit.
 

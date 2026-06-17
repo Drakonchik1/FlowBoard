@@ -44,36 +44,38 @@ function parseStatusPath(line: string): string {
   return trimmed.slice(3).trim();
 }
 
+/** Re-verification council after fixes — the only automatic git-publish trigger. */
+export function isCouncilVerifyTask(task: Task): boolean {
+  if (task.id === "close-council") return true;
+  return /^s\d+-council-verify$/.test(task.id);
+}
+
+/**
+ * Push to GitHub only after council re-verifies that all vulnerability fixes landed.
+ * Flow: council review → fix tasks (local) → council verify → publish.
+ */
+export function shouldPublishToGit(task: Task): boolean {
+  if (task.gitPublish === false) return false;
+  if (task.gitPublish === true) return true;
+  return isCouncilVerifyTask(task);
+}
+
 function inferCommitType(task: Task): string {
-  if (task.id === "close-docs" || task.id.endsWith("-council-fixes")) return "fix";
+  if (isCouncilVerifyTask(task)) return "fix";
   if (isCouncilTask(task)) return "docs";
   if (task.id.endsWith("-docs")) return "docs";
   if (task.id.startsWith("close-")) return "fix";
   return "feat";
 }
 
-/** Push to GitHub only after council vulnerability remediation for a sprint (not every queue task). */
-export function shouldPublishToGit(task: Task): boolean {
-  if (task.gitPublish === true) return true;
-  if (task.gitPublish === false) return false;
-
-  // Closeout: push once after close-01…close-11 fixes land (close-docs updates SPRINT/README).
-  if (task.id === "close-docs") return true;
-
-  // Per-sprint: push after council finding fixes (add sN-council-fixes to queue or gitPublish: true).
-  if (/^s\d+-council-fixes$/.test(task.id)) return true;
-
-  return false;
-}
-
 export function buildCommitSubject(task: Task): string {
   const type = inferCommitType(task);
-  if (task.id === "close-docs") {
-    return `${type}(closeout): Council vulnerability fixes — Sprints 1–5 closed`;
+  if (task.id === "close-council") {
+    return `${type}(closeout): Council verified — Sprints 1–5 remediation published`;
   }
-  if (/^s(\d+)-council-fixes$/.test(task.id)) {
-    const sprint = task.id.match(/^s(\d+)-/)?.[1];
-    return `${type}(s${sprint}-council-fixes): ${task.title}`;
+  const sprintVerify = task.id.match(/^s(\d+)-council-verify$/);
+  if (sprintVerify) {
+    return `${type}(s${sprintVerify[1]}): Council verified — Sprint ${sprintVerify[1]} remediation published`;
   }
   return `${type}(${task.id}): ${task.title}`;
 }
@@ -138,7 +140,7 @@ export async function publishTaskToGitHub(
     "-m",
     subject,
     "-m",
-    `Task queue: ${task.id}`,
+    `Task queue: ${task.id} — council verify passed`,
   ]);
 
   if (commit.code !== 0) {

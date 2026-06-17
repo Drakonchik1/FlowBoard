@@ -2,10 +2,34 @@
 
 Multi-agent sprint-end review orchestrated by `agent-runner` (`kind: "council"` tasks in `tasks/queue.json`).
 
+## Sprint security cycle (and GitHub publish)
+
+Each sprint follows this flow. **Nothing goes to GitHub until step 4 passes.**
+
+```
+1. Feature tasks (sN-01…)     → local
+2. sN-council                 → report findings (local)
+3. sN-council-fixes           → implement fixes (local)
+4. sN-council-verify          → council re-checks → git push if OK
+5. sN-docs                    → docs sync (local)
+```
+
+Closeout (Sprints 1–5) uses the same pattern:
+
+```
+close-01…close-11  → fixes from sprint-5-report (local)
+close-docs         → SPRINT/README (local)
+close-council      → re-verification → git push if OK
+```
+
+Agent-runner publishes on **`close-council`** and **`sN-council-verify`** only. If verify council marks the task `failed`, changes stay local until fixes and re-run.
+
+Templates: `tasks/council-task.template.json`, `tasks/council-fixes-task.template.json`, `tasks/council-verify-task.template.json`.
+
 ## What runs
 
 1. **Parallel reviewers** (separate agent sessions) write drafts to `docs/council/.work/`.
-2. **Council chair** (synthesizer) merges into `docs/council/sprint-N-report.md`.
+2. **Council chair** (synthesizer) merges into `docs/council/sprint-N-report.md` (or `*-verify-report.md`).
 
 Default reviewers:
 
@@ -26,11 +50,11 @@ Set on each member in `tasks/queue.json`: `"scope": "project"`.
 
 ## Adding to a new sprint
 
-1. Copy `tasks/council-task.template.json` → `sN-council` (read-only review).
-2. Add **`sN-council-fixes`** after council with `"gitPublish": true` — implement findings; agent-runner pushes to GitHub when done.
-3. Add `sN-docs` after fixes (docs only, no git publish).
-
-Place council **after** feature tasks, **before** council-fixes.
+1. Feature tasks (`sN-01`…)
+2. **`sN-council`** — initial review (`tasks/council-task.template.json`)
+3. **`sN-council-fixes`** — implement findings (`tasks/council-fixes-task.template.json`)
+4. **`sN-council-verify`** — re-verification + git publish (`tasks/council-verify-task.template.json`)
+5. **`sN-docs`** — docs sync
 
 ## Manual preview
 

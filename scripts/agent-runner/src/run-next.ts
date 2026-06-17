@@ -431,11 +431,11 @@ async function main() {
     ? "skipped (--skip-git)"
     : finalStatus !== "done"
       ? "skipped (task not done)"
-      : "skipped (local only — push on council-fix publish tasks)";
+      : "skipped (local only — push after council verify: close-council or sN-council-verify)";
 
   if (publishGit) {
 
-    console.log("[agent-runner] Committing and pushing council remediation to GitHub…");
+    console.log("[agent-runner] Council verify passed — publishing remediation to GitHub…");
 
     const gitResult = await publishTaskToGitHub(paths.root, task);
 

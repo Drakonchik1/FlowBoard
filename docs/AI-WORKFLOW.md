@@ -7,7 +7,7 @@ How to keep Cursor effective across sprint tasks without burning your AI plan.
 1. **One chat = one task** — close chat after commit lands on GitHub.
 2. **Always attach `SPRINT.md`** — agent reads state from file, not memory.
 3. **Precise `@` files** — e.g. `@CreateCardCommandHandler.cs` not `@Codebase`.
-4. **Commit + push after council-fix publish tasks** — one GitHub push per sprint when council findings are fixed (`close-docs`, `sN-council-fixes`). Feature/closeout subtasks stay local until then.
+4. **One GitHub push per sprint** — only after council **re-verification** passes (`close-council`, `sN-council-verify`). Review → fixes → verify → publish.
 
 ## Task prompt template (copy-paste)
 
@@ -18,27 +18,24 @@ Files: @[relevant files]
 Done when: [tests / behavior]
 Don't touch: [auth, migrations, etc.]
 After: update SPRINT.md checklist + session log
-After (manual chat): `git commit` + `git push` only on council-fix publish tasks (`close-docs`, `sN-council-fixes`).
+After (manual chat): `git commit` + `git push` only when council **verify** task passes (`close-council`, `sN-council-verify`).
 ```
 
-**Git publish tasks** (agent-runner pushes to GitHub when `done`):
+**Git publish** (one push per sprint — after full remediation verified):
 
 | Task | When |
 |------|------|
-| `close-docs` | After close-01…close-11 council fixes (Sprints 1–5) |
-| `sN-council-fixes` | After fixing Sprint N council findings |
-| `"gitPublish": true` | Any custom publish task in `tasks/queue.json` |
+| `close-council` | Re-verified close-01…close-11 fixes (Sprints 1–5) |
+| `sN-council-verify` | Re-verified Sprint N council fixes |
 
-All other queue tasks stay **local** until a publish task completes.
+Cycle: `sN-council` → `sN-council-fixes` (local) → `sN-council-verify` → **push**.
 
-Commit message examples:
+Commit examples:
 
-| Prefix | Example |
-|--------|---------|
-| `fix(closeout):` | Council vulnerability fixes — Sprints 1–5 closed |
-| `fix(s6-council-fixes):` | Fix Sprint 6 council security and bug findings |
-
-Automated runs: `run-next-task.ps1 -Run` pushes only on publish tasks above.
+| Message |
+|---------|
+| `fix(closeout): Council verified — Sprints 1–5 remediation published` |
+| `fix(s6): Council verified — Sprint 6 remediation published` |
 
 ### Example — fix integration tests
 
@@ -68,7 +65,7 @@ Ask before: new NuGet packages
 |------|------|--------|
 | 1 | 5 min | Update `SPRINT.md` — pick next unchecked item |
 | 2 | — | New chat → paste template → work → `dotnet test` |
-| 3 | 2 min | On council-fix publish task only: agent-runner commits + pushes (or manual `git push`) |
+| 3 | — | On council **verify** task: agent-runner commits + pushes if council signs off |
 | 4 | — | **New chat** for next task (do not continue same thread) |
 
 ## When quality drops
@@ -96,7 +93,7 @@ For **fresh agent session per task** without manual chat copy-paste:
 pwsh scripts/run-next-task.ps1 -Status          # queue overview
 pwsh scripts/run-next-task.ps1 -DryRun          # prompt for manual new chat
 # Automated: set CURSOR_API_KEY in `.env` (see `.env.example`, git-ignored). Key: Cursor Dashboard → API Keys.
-pwsh scripts/run-next-task.ps1 -Run             # one task (git push only on council-fix publish tasks)
+pwsh scripts/run-next-task.ps1 -Run             # push only when close-council / sN-council-verify passes
 pwsh scripts/run-next-task.ps1 -Run -ForceGit   # push after any completed task (override)
 pwsh scripts/run-next-task.ps1 -Run -SkipGit    # never push
 pwsh scripts/run-next-task.ps1 -Loop -Max 3     # up to 3 tasks sequentially

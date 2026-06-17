@@ -63,11 +63,11 @@ function gitFinishInstructions(task: Task): string {
 
   if (shouldPublishToGit(task)) {
     lines.push(
-      `6. Do **not** run \`git commit\` or \`git push\` — agent-runner publishes after this council-fix task (\`${buildCommitSubject(task)}\`).`
+      `6. Do **not** run \`git commit\` or \`git push\` — agent-runner publishes after council verify passes (\`${buildCommitSubject(task)}\`).`
     );
   } else {
     lines.push(
-      "6. Do **not** run `git commit` or `git push` — changes stay local until the sprint council-fix publish task (`close-docs`, `sN-council-fixes`, or `gitPublish: true` in queue)."
+      "6. Do **not** run `git commit` or `git push` — all work stays local until council re-verifies fixes (`close-council` or `sN-council-verify`)."
     );
   }
 
