@@ -4,10 +4,10 @@ How to keep Cursor effective across sprint tasks without burning your AI plan.
 
 ## Golden rules
 
-1. **One chat = one task** — close chat after commit.
+1. **One chat = one task** — close chat after commit lands on GitHub.
 2. **Always attach `SPRINT.md`** — agent reads state from file, not memory.
 3. **Precise `@` files** — e.g. `@CreateCardCommandHandler.cs` not `@Codebase`.
-4. **Commit after each task** — git + SPRINT.md = handoff for next chat.
+4. **Commit + push after each queue task** — one commit per `tasks/queue.json` item; git + SPRINT.md = handoff for next chat.
 
 ## Task prompt template (copy-paste)
 
@@ -18,7 +18,18 @@ Files: @[relevant files]
 Done when: [tests / behavior]
 Don't touch: [auth, migrations, etc.]
 After: update SPRINT.md checklist + session log
+After (manual chat): git commit -m "type(task-id): title" && git push
 ```
+
+Commit message format (one per queue task):
+
+| Prefix | When |
+|--------|------|
+| `feat(s6-01):` | New feature task |
+| `fix(close-01):` | Closeout / bugfix task |
+| `docs(s5-council):` | Docs or Live Council |
+
+Automated runs: `run-next-task.ps1 -Run` commits and pushes after each `done` task.
 
 ### Example — fix integration tests
 
@@ -48,7 +59,7 @@ Ask before: new NuGet packages
 |------|------|--------|
 | 1 | 5 min | Update `SPRINT.md` — pick next unchecked item |
 | 2 | — | New chat → paste template → work → `dotnet test` |
-| 3 | 2 min | Commit + update SPRINT.md session log |
+| 3 | 2 min | Agent-runner commits + pushes (or manual: `git commit` + `git push`) |
 | 4 | — | **New chat** for next task (do not continue same thread) |
 
 ## When quality drops
@@ -76,7 +87,8 @@ For **fresh agent session per task** without manual chat copy-paste:
 pwsh scripts/run-next-task.ps1 -Status          # queue overview
 pwsh scripts/run-next-task.ps1 -DryRun          # prompt for manual new chat
 # Automated: set CURSOR_API_KEY in `.env` (see `.env.example`, git-ignored). Key: Cursor Dashboard → API Keys.
-pwsh scripts/run-next-task.ps1 -Run             # one task, new session
+pwsh scripts/run-next-task.ps1 -Run             # one task, new session, then commit + push
+pwsh scripts/run-next-task.ps1 -Run -SkipGit    # one task without git publish
 pwsh scripts/run-next-task.ps1 -Loop -Max 3     # up to 3 tasks sequentially
 ```
 

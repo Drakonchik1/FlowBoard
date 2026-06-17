@@ -43,6 +43,16 @@ Docs: [cursor.com/docs/api/sdk/typescript](https://cursor.com/docs/api/sdk/types
 
 Each `Agent.create()` = **new agent** (fresh session). State carries forward via `HANDOFF.md`, `SPRINT.md`, `tasks/queue.json`.
 
+After a task is marked **done** and tests pass, the runner **commits and pushes** to `origin/<current-branch>`:
+
+| Task kind | Commit prefix | Example |
+|-----------|---------------|---------|
+| Feature (`s6-01`, …) | `feat(task-id):` | `feat(s6-01): Comments entity + CRUD API` |
+| Closeout (`close-01`, …) | `fix(task-id):` | `fix(close-01): Wire Redis in docker-compose API` |
+| Docs / council | `docs(task-id):` | `docs(s5-council): Live Council — Sprint 5` |
+
+Skip with `--skip-git` (PowerShell: `-SkipGit`). Sensitive paths (`.env`, `secrets.json`) block the commit.
+
 ### Live Council (sprint-end)
 
 Tasks with `"kind": "council"` run **after** regular implementation tasks:

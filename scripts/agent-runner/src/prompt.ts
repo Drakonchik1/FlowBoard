@@ -1,4 +1,5 @@
 import type { Task, TaskQueue } from "./types.js";
+import { buildCommitSubject } from "./git-publish.js";
 
 export function buildTaskPrompt(
   task: Task,
@@ -48,7 +49,8 @@ ${task.notes ? `## Notes\n\n${task.notes}\n` : ""}
 3. Update \`tasks/queue.json\`: set task \`${task.id}\` status to \`"done"\` (or \`"failed"\` with reason in notes if blocked).
 4. Update \`SPRINT.md\`: checklist, session log row, "Last updated" date.
 5. Update \`HANDOFF.md\`: what was done, test result, next task id.
-6. Do NOT start the next queued task in this session.
+6. Do **not** run \`git commit\` or \`git push\` — agent-runner commits and pushes after this task (\`${buildCommitSubject(task)}\`).
+7. Do NOT start the next queued task in this session.
 
 ## Project goal
 

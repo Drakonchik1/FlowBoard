@@ -15,6 +15,7 @@ export async function updateHandoff(
     title: string;
     result: string;
     tests: string;
+    git?: string;
     nextTaskId: string | null;
     filesTouched?: string[];
   }
@@ -27,6 +28,8 @@ export async function updateHandoff(
   const nextSection = update.nextTaskId
     ? `Queue: \`tasks/queue.json\` — next pending: **${update.nextTaskId}**`
     : "Queue complete for current sprint — add tasks to `tasks/queue.json`.";
+
+  const gitRow = update.git ? `| **Git** | ${update.git} |\n` : "";
 
   const content = `# FlowBoard — session handoff
 
@@ -45,7 +48,7 @@ FlowBoard — ASP.NET Core 10 Kanban API (Clean Architecture, JWT, RBAC, SignalR
 | **Task ID** | ${update.taskId} |
 | **Result** | ${update.result} |
 | **Tests** | ${update.tests} |
-
+${gitRow}
 ## Decisions made (carry forward)
 
 - See \`SPRINT.md\` → Architecture decisions

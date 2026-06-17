@@ -4,6 +4,7 @@ param(
     [switch]$Loop,
     [switch]$Status,
     [switch]$Retry,
+    [switch]$SkipGit,
     [int]$Max = 3,
     [switch]$SkipInstall
 )
@@ -44,7 +45,8 @@ if (-not $DryRun -and -not $Run -and -not $Loop -and -not $Status) {
 FlowBoard agent-runner
 
   powershell scripts/run-next-task.ps1 -DryRun     Preview prompt for manual new chat
-  powershell scripts/run-next-task.ps1 -Run        Run next task via Cursor SDK
+  powershell scripts/run-next-task.ps1 -Run        Run next task via Cursor SDK (commit + push when done)
+  powershell scripts/run-next-task.ps1 -Run -SkipGit   Run task without git commit/push
   powershell scripts/run-next-task.ps1 -Retry      Include failed tasks on retry
   powershell scripts/run-next-task.ps1 -Loop       Run up to -Max tasks sequentially (default 3)
   powershell scripts/run-next-task.ps1 -Status     Show queue status
@@ -99,6 +101,7 @@ try {
     if ($Loop) {
         $args = @("tsx", "src/run-loop.ts", "--root=$ProjectRoot", "--max=$Max")
         if ($DryRun) { $args += "--dry-run" }
+        if ($SkipGit) { $args += "--skip-git" }
         npx @args
         exit $LASTEXITCODE
     }
@@ -119,6 +122,7 @@ try {
         }
         $tsxArgs = @("tsx", "src/run-next.ts", "--root=$ProjectRoot")
         if ($Retry) { $tsxArgs += "--retry-failed" }
+        if ($SkipGit) { $tsxArgs += "--skip-git" }
         npx @tsxArgs
         exit $LASTEXITCODE
     }

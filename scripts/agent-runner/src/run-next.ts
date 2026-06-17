@@ -36,6 +36,8 @@ import { loadState, saveState } from "./state.js";
 
 import { isCouncilTask } from "./types.js";
 
+import { publishTaskToGitHub } from "./git-publish.js";
+
 import { runDotnetTest } from "./verify.js";
 
 import { Agent, CursorAgentError } from "@cursor/sdk";
@@ -48,13 +50,15 @@ function parseArgs(argv: string[]) {
 
   const verifyTests = !argv.includes("--skip-tests");
 
+  const skipGit = argv.includes("--skip-git");
+
   const retryFailed = argv.includes("--retry-failed") || argv.includes("--retry");
 
   const rootFlag = argv.find((a) => a.startsWith("--root="));
 
   const projectRoot = rootFlag ? rootFlag.split("=")[1]! : resolveProjectRoot();
 
-  return { dryRun, verifyTests, retryFailed, projectRoot };
+  return { dryRun, verifyTests, skipGit, retryFailed, projectRoot };
 
 }
 
@@ -416,6 +420,48 @@ async function main() {
 
 
 
+  let gitSummary = args.skipGit ? "skipped (--skip-git)" : "skipped (task not done)";
+
+  if (finalStatus === "done" && !args.skipGit) {
+
+    console.log("[agent-runner] Committing and pushing to GitHub…");
+
+    const gitResult = await publishTaskToGitHub(paths.root, task);
+
+    gitSummary = gitResult.summary;
+
+    console.log(`[agent-runner] Git: ${gitSummary}`);
+
+    if (!gitResult.ok) {
+
+      await updateHandoff(paths.handoff, {
+
+        taskId: task.id,
+
+        title: task.title,
+
+        result: `${outcome} — git publish failed: ${gitSummary}`,
+
+        tests,
+
+        nextTaskId: next?.id ?? null,
+
+        filesTouched: council
+
+          ? [task.council?.outputFile ?? "docs/council/", "SPRINT.md", "HANDOFF.md"]
+
+          : task.files,
+
+      });
+
+      process.exit(2);
+
+    }
+
+  }
+
+
+
   await updateHandoff(paths.handoff, {
 
     taskId: task.id,
@@ -425,6 +471,8 @@ async function main() {
     result: outcome,
 
     tests,
+
+    git: gitSummary,
 
     nextTaskId: next?.id ?? null,
 
