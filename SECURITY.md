@@ -13,5 +13,6 @@ Please include steps to reproduce and impact assessment. Expect a response withi
 ## Credential Hygiene
 
 - Never commit `.env`, `secrets.json`, or `appsettings.Development.json`
+- `.env` may contain `CURSOR_API_KEY` for local agent-runner only — never commit or share
 - Use `dotnet user-secrets` locally and environment variables in Docker/production
 - Rotate JWT secret and database passwords if you suspect exposure

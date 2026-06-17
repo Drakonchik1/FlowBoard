@@ -1,0 +1,37 @@
+{
+  "_comment": "Append this object to tasks[] as the last item when planning a new sprint queue.",
+  "id": "sN-council",
+  "kind": "council",
+  "title": "Live Council — Sprint N review (bugs + security + architecture)",
+  "status": "pending",
+  "files": ["src/", "tests/", "docker-compose.yml", "SECURITY.md", "SPRINT.md"],
+  "doneWhen": "docs/council/sprint-N-report.md exists with prioritized findings and file:line refs",
+  "dontTouch": ["application code — report only", "auth behavior changes", "migrations"],
+  "notes": "Last task in sprint. Use scope project on security-auditor for milestone full-repo audits (see s5-council).",
+  "council": {
+    "outputFile": "docs/council/sprint-N-report.md",
+    "workDir": "docs/council/.work",
+    "members": [
+      {
+        "id": "bug-hunter",
+        "role": "Bug & logic reviewer",
+        "focus": "Logic errors, edge cases, test gaps, consistency across layers."
+      },
+      {
+        "id": "security-auditor",
+        "role": "Security reviewer",
+        "scope": "sprint",
+        "focus": "OWASP API Top 10 2023, ASVS L2, JWT/refresh, RBAC, injection, secrets. Set scope to project for full-repo baseline."
+      },
+      {
+        "id": "architecture-guard",
+        "role": "Architecture reviewer",
+        "focus": "Clean Architecture boundaries, convention drift, scope creep."
+      }
+    ],
+    "synthesizer": {
+      "role": "Council chair",
+      "focus": "Merge, deduplicate, prioritize, list follow-up tasks for next sprint."
+    }
+  }
+}

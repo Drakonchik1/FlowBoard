@@ -1,0 +1,456 @@
+{
+  "version": 2,
+  "projectGoal": "FlowBoard — ASP.NET Core 10 Kanban API with Clean Architecture, JWT, RBAC, SignalR real-time, Redis scale-out, production deploy.",
+  "sprint": 6,
+  "activePhase": "closeout",
+  "phases": {
+    "closeout": {
+      "title": "Closeout — finish & harden Sprints 1–5",
+      "description": "Council findings + gaps before starting new features. Does not replace Sprint 6–8 roadmap.",
+      "source": "docs/council/sprint-5-report.md"
+    },
+    "sprint6": {
+      "title": "Sprint 6 — Comments + Tags + Email (original plan)",
+      "description": "Feature sprint from Notion roadmap. Start only after closeout phase done."
+    },
+    "sprint7": {
+      "title": "Sprint 7 — Hangfire + Activity Log (original plan)"
+    },
+    "sprint8": {
+      "title": "Sprint 8 — Production deploy + CI (original plan)"
+    }
+  },
+  "sprintRoadmap": {
+    "1": { "status": "done", "note": "Auth — complete; closeout: refresh race (close-10)" },
+    "2": { "status": "done", "note": "RBAC — complete; closeout: InviteMember enum (close-10), handler tests (close-07)" },
+    "3": { "status": "done", "note": "Boards/Cards — complete; closeout: MoveCard (close-06), integration gaps (close-09)" },
+    "4": { "status": "done-pending-closeout", "note": "SignalR CardMoved shipped; closeout: stale groups (close-02), hub tests (close-08), broadcast test (close-09)" },
+    "5": { "status": "done-pending-closeout", "note": "Redis backplane shipped; closeout: compose wiring (close-01), Redis tests (close-08)" },
+    "6": { "status": "planned", "note": "Comments + Tags + Email — queue phase sprint6" },
+    "7": { "status": "planned", "note": "Hangfire + activity log" },
+    "8": { "status": "planned", "note": "Deploy + prod hardening (incl. rate limits, Redis AUTH)" }
+  },
+  "tasks": [
+    {
+      "id": "close-01",
+      "phase": "closeout",
+      "closesSprints": [5],
+      "title": "Wire Redis connection in docker-compose API service",
+      "status": "pending",
+      "priority": "high",
+      "councilRefs": [1, 7],
+      "files": ["docker-compose.yml", "SPRINT.md", "README.md", ".env.example"],
+      "doneWhen": "api.environment sets ConnectionStrings__Redis=redis:6379; docs match compose backplane behaviour",
+      "dontTouch": ["auth", "JWT", "migrations", "handler business logic"],
+      "notes": "Sprint 5 deliverable incomplete in compose stack."
+    },
+    {
+      "id": "close-02",
+      "phase": "closeout",
+      "closesSprints": [4],
+      "title": "SignalR group lifecycle — evict removed/downgraded members",
+      "status": "pending",
+      "priority": "high",
+      "councilRefs": [2],
+      "files": [
+        "src/FlowBoard.API/Hubs/BoardHub.cs",
+        "src/FlowBoard.Application/Features/Workspaces/Commands/RemoveMember/RemoveMemberCommandHandler.cs",
+        "src/FlowBoard.Application/Features/Workspaces/Commands/ChangeMemberRole/ChangeMemberRoleCommandHandler.cs",
+        "src/FlowBoard.API/Services/BoardRealtimeNotifier.cs"
+      ],
+      "doneWhen": "Removed/Viewer-downgraded users stop receiving CardMoved; test covers stale-group case",
+      "dontTouch": ["auth token rotation", "workspace RBAC 404 on REST", "migrations"],
+      "notes": "Sprint 4 security gap — highest real-time IDOR risk."
+    },
+    {
+      "id": "close-03",
+      "phase": "closeout",
+      "closesSprints": [3, 4],
+      "title": "Domain-event notifications must not fail HTTP after successful commit",
+      "status": "pending",
+      "priority": "high",
+      "councilRefs": [3],
+      "files": [
+        "src/FlowBoard.Infrastructure/Persistence/UnitOfWork.cs",
+        "src/FlowBoard.Application/EventHandlers/CardMovedEventHandler.cs"
+      ],
+      "doneWhen": "SignalR failure after SaveChanges logs error; client does not get 500 for committed move",
+      "dontTouch": ["auth", "migrations", "CardMoved payload shape"],
+      "notes": "Sprint 3 domain events + Sprint 4 notifier chain."
+    },
+    {
+      "id": "close-04",
+      "phase": "closeout",
+      "closesSprints": [3],
+      "title": "UnitOfWork — clear domain events only after successful SaveChanges",
+      "status": "pending",
+      "priority": "high",
+      "councilRefs": [4],
+      "files": [
+        "src/FlowBoard.Infrastructure/Persistence/UnitOfWork.cs",
+        "tests/FlowBoard.UnitTests/Infrastructure/UnitOfWorkTests.cs"
+      ],
+      "doneWhen": "Events retained on save failure; cleared after commit; unit tests added",
+      "dontTouch": ["auth", "migrations", "repository implementations"],
+      "notes": "Core persistence reliability from Sprint 3."
+    },
+    {
+      "id": "close-05",
+      "phase": "closeout",
+      "closesSprints": [4],
+      "title": "BoardHub — access checks via Application layer (CQRS)",
+      "status": "pending",
+      "priority": "medium",
+      "councilRefs": [8],
+      "files": [
+        "src/FlowBoard.API/Hubs/BoardHub.cs",
+        "src/FlowBoard.Application/Features/Boards/Queries/EnsureBoardAccess/"
+      ],
+      "doneWhen": "Hub uses MediatR/guard; no direct IBoardRepository/IWorkspaceRepository in hub",
+      "dontTouch": ["REST controllers", "auth", "migrations"],
+      "notes": "Sprint 4 architecture completion."
+    },
+    {
+      "id": "close-06",
+      "phase": "closeout",
+      "closesSprints": [3],
+      "title": "MoveCard hardening — validator, 404 semantics, concurrency",
+      "status": "pending",
+      "priority": "medium",
+      "councilRefs": [9, 10, 11],
+      "files": [
+        "src/FlowBoard.Application/Features/Cards/Commands/MoveCard/",
+        "src/FlowBoard.Domain/Entities/Card.cs",
+        "src/FlowBoard.Infrastructure/Persistence/Configurations/CardConfiguration.cs"
+      ],
+      "doneWhen": "Guid.Empty rejected; inaccessible list/neighbour → 404; concurrency strategy + test",
+      "dontTouch": ["auth", "existing migrations without approval"],
+      "notes": "Sprint 3 cards completion."
+    },
+    {
+      "id": "close-07",
+      "phase": "closeout",
+      "closesSprints": [2, 3],
+      "title": "Unit tests — untested handler authz matrix",
+      "status": "pending",
+      "priority": "medium",
+      "councilRefs": [21],
+      "files": [
+        "tests/FlowBoard.UnitTests/Handlers/Cards/",
+        "tests/FlowBoard.UnitTests/Handlers/Boards/",
+        "tests/FlowBoard.UnitTests/Handlers/BoardLists/",
+        "tests/FlowBoard.UnitTests/Handlers/Projects/"
+      ],
+      "doneWhen": "404 non-member + 403 Viewer on each untested mutation handler; dotnet test green",
+      "dontTouch": ["application handlers"],
+      "notes": "~14 handlers from Sprints 2–3 lacking tests."
+    },
+    {
+      "id": "close-08",
+      "phase": "closeout",
+      "closesSprints": [4, 5],
+      "title": "Tests — Redis config precedence, BoardHub join denial, stable backplane assert",
+      "status": "pending",
+      "priority": "medium",
+      "councilRefs": [18, 19, 31],
+      "files": [
+        "tests/FlowBoard.UnitTests/Configuration/RedisConnectionExtensionsTests.cs",
+        "tests/FlowBoard.UnitTests/Hubs/BoardHubTests.cs",
+        "src/FlowBoard.API/Configuration/RedisConnectionExtensions.cs"
+      ],
+      "doneWhen": "All Redis config keys tested; outsider JoinBoard denied; backplane test not type-name fragile",
+      "dontTouch": ["auth"],
+      "notes": "Sprint 4 hub + Sprint 5 Redis test gaps."
+    },
+    {
+      "id": "close-09",
+      "phase": "closeout",
+      "closesSprints": [3, 4],
+      "title": "Integration tests — soft-deleted cards, CardMoved path, concurrent move smoke",
+      "status": "pending",
+      "priority": "medium",
+      "councilRefs": [20, 22, 9],
+      "files": [
+        "tests/FlowBoard.IntegrationTests/BoardWorkflowTests.cs",
+        "tests/FlowBoard.IntegrationTests/"
+      ],
+      "doneWhen": "GetBoard_RespectsSoftDeletedCards; notifier/broadcast path verified; concurrent move documented or tested",
+      "dontTouch": [],
+      "notes": "Original Sprint 4 plan included SignalR integration test — partial closeout."
+    },
+    {
+      "id": "close-10",
+      "phase": "closeout",
+      "closesSprints": [1, 2],
+      "title": "Security — InviteMember enumeration + refresh token rotation race",
+      "status": "pending",
+      "priority": "medium",
+      "councilRefs": [12, 13],
+      "files": [
+        "src/FlowBoard.Application/Features/Workspaces/Commands/InviteMember/",
+        "src/FlowBoard.Application/Features/Auth/Commands/RefreshToken/",
+        "tests/FlowBoard.UnitTests/Handlers/"
+      ],
+      "doneWhen": "Generic 404 on invite; concurrent refresh test + transaction/lock fix",
+      "dontTouch": ["refresh family revocation semantics"],
+      "notes": "Sprint 1–2 auth hardening."
+    },
+    {
+      "id": "close-11",
+      "phase": "closeout",
+      "closesSprints": [5],
+      "title": "Polish — Redis trim, EventHandlers convention, LeaveBoard docs",
+      "status": "pending",
+      "priority": "low",
+      "councilRefs": [17, 24, 25, 26, 30],
+      "files": [
+        "src/FlowBoard.API/Configuration/RedisConnectionExtensions.cs",
+        "src/FlowBoard.API/Program.cs",
+        "src/FlowBoard.Application/EventHandlers/"
+      ],
+      "doneWhen": "Trim whitespace config; convention documented; minor Redis startup tidy",
+      "dontTouch": ["auth", "migrations"],
+      "notes": "Low-severity batch. Prod rate limits → Sprint 8."
+    },
+    {
+      "id": "close-docs",
+      "phase": "closeout",
+      "closesSprints": [1, 2, 3, 4, 5],
+      "title": "Mark Sprints 1–5 fully closed in SPRINT.md + README",
+      "status": "pending",
+      "priority": "low",
+      "files": ["SPRINT.md", "README.md", "HANDOFF.md"],
+      "doneWhen": "Sprint status shows 1–5 closed (not done-pending-closeout); closeout phase logged; next phase sprint6",
+      "dontTouch": ["application code"],
+      "notes": "Housekeeping after close-01…close-11."
+    },
+    {
+      "id": "close-council",
+      "phase": "closeout",
+      "kind": "council",
+      "title": "Live Council — closeout verification (Sprints 1–5)",
+      "status": "pending",
+      "files": [
+        "src/",
+        "tests/",
+        "docker-compose.yml",
+        "docs/council/sprint-5-report.md",
+        "SPRINT.md"
+      ],
+      "doneWhen": "docs/council/closeout-report.md exists; open High/Medium items from sprint-5-report verified fixed or deferred with reason",
+      "dontTouch": ["application code — report only", "auth behavior changes", "migrations"],
+      "notes": "Optional read-only verify after close-docs.",
+      "council": {
+        "outputFile": "docs/council/closeout-report.md",
+        "workDir": "docs/council/.work",
+        "members": [
+          {
+            "id": "bug-hunter",
+            "role": "Bug & logic reviewer",
+            "scope": "sprint",
+            "focus": "Verify close-01…close-11 fixed the sprint-5-report items."
+          },
+          {
+            "id": "security-auditor",
+            "role": "Security reviewer",
+            "scope": "project",
+            "focus": "Re-check SignalR, auth, IDOR after closeout."
+          },
+          {
+            "id": "architecture-guard",
+            "role": "Architecture reviewer",
+            "scope": "sprint",
+            "focus": "BoardHub refactor, compose wiring."
+          }
+        ],
+        "synthesizer": {
+          "role": "Council chair",
+          "focus": "Sign off Sprints 1–5; list any remaining deferrals for Sprint 8."
+        }
+      }
+    },
+    {
+      "id": "s6-01",
+      "phase": "sprint6",
+      "title": "Comments entity + CRUD API",
+      "status": "pending",
+      "files": [
+        "src/FlowBoard.Domain/Entities/",
+        "src/FlowBoard.Application/Features/Comments/",
+        "src/FlowBoard.Infrastructure/Persistence/"
+      ],
+      "doneWhen": "Comment entity, migration, Create/Get/Update/Delete handlers with workspace authz; unit tests",
+      "dontTouch": ["auth", "existing card move logic"],
+      "notes": "Original Sprint 6 — Notion roadmap."
+    },
+    {
+      "id": "s6-02",
+      "phase": "sprint6",
+      "title": "Comments real-time push via SignalR",
+      "status": "pending",
+      "files": [
+        "src/FlowBoard.API/Hubs/BoardHub.cs",
+        "src/FlowBoard.Application/EventHandlers/"
+      ],
+      "doneWhen": "CommentAdded domain event → hub broadcast to board group",
+      "dontTouch": ["auth"],
+      "notes": "Depends on s6-01."
+    },
+    {
+      "id": "s6-03",
+      "phase": "sprint6",
+      "title": "Tags + CardTags (workspace tags, apply to cards)",
+      "status": "pending",
+      "files": [
+        "src/FlowBoard.Domain/",
+        "src/FlowBoard.Application/Features/Tags/"
+      ],
+      "doneWhen": "Tag CRUD, apply/remove on card; workspace scoped; tests",
+      "dontTouch": ["auth", "migrations without task scope"],
+      "notes": "Original Sprint 6."
+    },
+    {
+      "id": "s6-04",
+      "phase": "sprint6",
+      "title": "IEmailService + MailKit SMTP implementation",
+      "status": "pending",
+      "files": [
+        "src/FlowBoard.Application/Common/Interfaces/IEmailService.cs",
+        "src/FlowBoard.Infrastructure/Services/"
+      ],
+      "doneWhen": "Interface in Application; MailKit impl in Infrastructure; config via secrets",
+      "dontTouch": ["auth"],
+      "notes": "Original Sprint 6."
+    },
+    {
+      "id": "s6-05",
+      "phase": "sprint6",
+      "title": "Async email via IHostedService + Channel",
+      "status": "pending",
+      "files": ["src/FlowBoard.Infrastructure/"],
+      "doneWhen": "Non-blocking email queue; card assignment triggers email",
+      "dontTouch": ["auth"],
+      "notes": "Original Sprint 6. Hangfire migration in Sprint 7."
+    },
+    {
+      "id": "s6-06",
+      "phase": "sprint6",
+      "title": "CleanupExpiredRefreshTokensService (IHostedService)",
+      "status": "pending",
+      "files": ["src/FlowBoard.Infrastructure/"],
+      "doneWhen": "Daily scan revokes expired refresh tokens",
+      "dontTouch": ["refresh rotation logic"],
+      "notes": "Original Sprint 6."
+    },
+    {
+      "id": "s6-07",
+      "phase": "sprint6",
+      "title": "Integration tests — comments + tags",
+      "status": "pending",
+      "files": ["tests/FlowBoard.IntegrationTests/"],
+      "doneWhen": "TestContainers tests for comment and tag workflows",
+      "dontTouch": [],
+      "notes": "Original Sprint 6."
+    },
+    {
+      "id": "s6-docs",
+      "phase": "sprint6",
+      "title": "Sync docs — Sprint 6 delivered",
+      "status": "pending",
+      "files": ["SPRINT.md", "README.md", "HANDOFF.md"],
+      "doneWhen": "Sprint 6 marked done; session log updated",
+      "dontTouch": ["application code"],
+      "notes": "End of feature Sprint 6."
+    },
+    {
+      "id": "s7-01",
+      "phase": "sprint7",
+      "title": "Add Hangfire with SQL Server storage",
+      "status": "pending",
+      "files": ["src/FlowBoard.Infrastructure/", "src/FlowBoard.API/Program.cs"],
+      "doneWhen": "Hangfire configured; dashboard at /jobs (admin policy)",
+      "dontTouch": ["auth"],
+      "notes": "Original Sprint 7."
+    },
+    {
+      "id": "s7-02",
+      "phase": "sprint7",
+      "title": "Migrate email + token cleanup jobs to Hangfire",
+      "status": "pending",
+      "files": ["src/FlowBoard.Infrastructure/"],
+      "doneWhen": "IHostedService email/cleanup replaced by Hangfire jobs with retry",
+      "dontTouch": [],
+      "notes": "Original Sprint 7."
+    },
+    {
+      "id": "s7-03",
+      "phase": "sprint7",
+      "title": "ActivityLog entity + event-driven writes",
+      "status": "pending",
+      "files": ["src/FlowBoard.Domain/", "src/FlowBoard.Application/"],
+      "doneWhen": "Activity on card move, create, member invite; GetCardActivity query (Dapper)",
+      "dontTouch": ["auth"],
+      "notes": "Original Sprint 7."
+    },
+    {
+      "id": "s7-docs",
+      "phase": "sprint7",
+      "title": "Sync docs — Sprint 7 delivered",
+      "status": "pending",
+      "files": ["SPRINT.md", "README.md"],
+      "doneWhen": "Sprint 7 marked done",
+      "dontTouch": ["application code"],
+      "notes": ""
+    },
+    {
+      "id": "s8-01",
+      "phase": "sprint8",
+      "title": "Production docker-compose + secrets hardening",
+      "status": "pending",
+      "files": ["docker-compose.yml", ".env.example", "src/FlowBoard.API/Program.cs"],
+      "doneWhen": "No public SQL/Redis ports; Production env; AllowedOrigins; Redis AUTH documented",
+      "dontTouch": ["auth rotation"],
+      "notes": "Council s8-prep items + original Sprint 8."
+    },
+    {
+      "id": "s8-02",
+      "phase": "sprint8",
+      "title": "Rate limiting on authenticated write endpoints",
+      "status": "pending",
+      "files": ["src/FlowBoard.API/Program.cs"],
+      "doneWhen": "Per-user or per-IP policy on mutations; auth limit unchanged",
+      "dontTouch": ["auth endpoint limits"],
+      "notes": "Council finding #15."
+    },
+    {
+      "id": "s8-03",
+      "phase": "sprint8",
+      "title": "CI — integration job parity + coverage report",
+      "status": "pending",
+      "files": [".github/workflows/", "tests/"],
+      "doneWhen": "CI documents Docker requirement; Coverlet/report optional",
+      "dontTouch": [],
+      "notes": "Original Sprint 8 + council #23."
+    },
+    {
+      "id": "s8-04",
+      "phase": "sprint8",
+      "title": "Deploy to Railway/Azure + live URL in README",
+      "status": "pending",
+      "files": ["README.md", "docker-compose.yml"],
+      "doneWhen": "Production deploy URL documented; compose prod variant",
+      "dontTouch": [],
+      "notes": "Original Sprint 8 CV deliverable."
+    },
+    {
+      "id": "s8-docs",
+      "phase": "sprint8",
+      "title": "Sync docs — Sprint 8 / MVP complete",
+      "status": "pending",
+      "files": ["SPRINT.md", "README.md", "HANDOFF.md"],
+      "doneWhen": "MVP marked complete; roadmap updated",
+      "dontTouch": ["application code"],
+      "notes": ""
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+---
+description: FlowBoard project conventions — read SPRINT.md for current task state
+alwaysApply: true
+---
+
+# FlowBoard — agent rules
+
+## Start of every task
+
+1. Read `SPRINT.md`, `HANDOFF.md`, and `tasks/queue.json` for current state.
+2. One task per chat — do not batch unrelated work.
+3. Use `@` on specific files, not whole codebase.
+4. Run `dotnet test` before finishing.
+5. When done: update `tasks/queue.json` status, `HANDOFF.md`, and `SPRINT.md` session log.
+
+## Stack
+
+ASP.NET Core 10 · Clean Architecture · MediatR · FluentValidation · EF Core 10 · SQL Server · Dapper (reads) · JWT · xUnit + Moq
+
+## Code conventions
+
+- **Handlers:** one command/query per folder under `Features/{Area}/`
+- **Validators:** `*CommandValidator` / `*QueryValidator` in same folder as handler
+- **Controllers:** thin — `ISender.Send` only, no business logic
+- **Domain:** no NuGet deps; use factory methods on entities (`User.Create`, etc.)
+- **Exceptions:** `NotFoundException` → 404; `ForbiddenException` → 403; workspace outsiders → 404 always
+- **Comments:** English only; brief XML on public API endpoints
+- **Naming:** PascalCase in C# and SQL columns (Dapper: `MatchNamesWithUnderscores` is OFF)
+
+## Testing
+
+- Every new handler gets unit tests in `tests/FlowBoard.UnitTests/Handlers/{Area}/`
+- Mock repositories with Moq — no real DB in unit tests
+- Integration tests go in `FlowBoard.IntegrationTests` — require Docker + TestContainers
+
+## Scope discipline
+
+- Minimal diff — no drive-by refactors
+- Ask before: schema/migration changes, auth changes, renaming public API routes
+- Do not migrate to Postgres or change deploy target unless explicitly requested
+- Do not update README/SPRINT unless the task includes docs
+
+## Done when
+
+- Code compiles
+- Relevant tests added or updated
+- `dotnet test` passes (or task documents which suite and why)
+- `SPRINT.md` checklist updated if sprint state changed

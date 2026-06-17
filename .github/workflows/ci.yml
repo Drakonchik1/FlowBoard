@@ -17,11 +17,17 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - name: Verify Docker (integration tests)
+        run: docker info
+
       - name: Restore
         run: dotnet restore
 
       - name: Build
         run: dotnet build --no-restore -c Release
 
-      - name: Test
-        run: dotnet test --no-build -c Release --verbosity normal
+      - name: Unit tests
+        run: dotnet test tests/FlowBoard.UnitTests --no-build -c Release --verbosity normal
+
+      - name: Integration tests (TestContainers + SQL Server)
+        run: dotnet test tests/FlowBoard.IntegrationTests --no-build -c Release --verbosity normal

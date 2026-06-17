@@ -8,6 +8,12 @@
 .env.*
 !.env.example
 
+# Live Council transient drafts (final reports in docs/council/*.md are committed)
+docs/council/.work/
+
+# Agent runner local state
+tasks/.runner-state.json
+
 # Local dev config (use user-secrets or secrets.example.json)
 **/appsettings.Development.json
 **/secrets.json

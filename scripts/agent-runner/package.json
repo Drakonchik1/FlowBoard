@@ -1,0 +1,25 @@
+{
+  "name": "@flowboard/agent-runner",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "next": "tsx src/run-next.ts",
+    "loop": "tsx src/run-loop.ts",
+    "status": "tsx src/status.ts",
+    "dry-run": "tsx src/run-next.ts --dry-run",
+    "postinstall": "node -e \"import('@connectrpc/connect-node').then(()=>console.log('[agent-runner] deps OK')).catch(()=>{console.error('Missing @connectrpc/connect-node');process.exit(1)})\""
+  },
+  "dependencies": {
+    "@connectrpc/connect-node": "^1.6.1",
+    "@cursor/sdk": "^1.0.19"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
