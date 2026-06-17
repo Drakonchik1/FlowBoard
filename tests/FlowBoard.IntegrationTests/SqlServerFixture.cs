@@ -1,3 +1,4 @@
+using DotNet.Testcontainers.Builders;
 using FlowBoard.Application;
 using FlowBoard.Application.Common.Interfaces;
 using FlowBoard.Infrastructure;
@@ -15,12 +16,15 @@ namespace FlowBoard.IntegrationTests;
 /// service graph against it, and applies EF Core migrations. Tests then drive the system through MediatR
 /// exactly as the API does — no mocks, real SQL, real Dapper reads.
 ///
-/// Requires a running Docker daemon. CI runners provide one; locally, start Docker Desktop.
+/// Requires a running Docker daemon (TestContainers) unless <c>FLOWBOARD_INTEGRATION_CONNECTION</c> is set
+/// (see <c>scripts/run-integration-tests.ps1 -UseCompose</c>). When Docker is unavailable,
+/// <see cref="IsDockerAvailable"/> is false and integration tests skip instead of failing the suite.
 /// </summary>
 public sealed class SqlServerFixture : IAsyncLifetime
 {
-    private readonly MsSqlContainer _container = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest")
-        .Build();
+    private MsSqlContainer? _container;
+
+    public bool IsDockerAvailable { get; private set; }
 
     public IServiceProvider Services { get; private set; } = null!;
 
@@ -28,30 +32,48 @@ public sealed class SqlServerFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        await _container.StartAsync();
-
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
+        try
+        {
+            var connectionString = Environment.GetEnvironmentVariable("FLOWBOARD_INTEGRATION_CONNECTION");
+            if (string.IsNullOrWhiteSpace(connectionString))
             {
-                ["ConnectionStrings:DefaultConnection"] = _container.GetConnectionString(),
-                ["Jwt:SecretKey"] = "integration-tests-secret-key-0123456789",
-                ["Jwt:Issuer"] = "FlowBoard.API",
-                ["Jwt:Audience"] = "FlowBoard.Client",
-            })
-            .Build();
+                _container = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest")
+                    .Build();
 
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddSingleton<IConfiguration>(configuration);
-        services.AddApplication();
-        services.AddInfrastructure(configuration);
-        services.AddSingleton<ICurrentUserService>(CurrentUser);
+                await _container.StartAsync();
+                connectionString = _container.GetConnectionString();
+            }
 
-        Services = services.BuildServiceProvider();
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["ConnectionStrings:DefaultConnection"] = connectionString,
+                    ["Jwt:SecretKey"] = "integration-tests-secret-key-0123456789",
+                    ["Jwt:Issuer"] = "FlowBoard.API",
+                    ["Jwt:Audience"] = "FlowBoard.Client",
+                })
+                .Build();
 
-        using var scope = Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<FlowBoardDbContext>();
-        await db.Database.MigrateAsync();
+            var services = new ServiceCollection();
+            services.AddLogging();
+            services.AddSingleton<IConfiguration>(configuration);
+            services.AddApplication();
+            services.AddInfrastructure(configuration);
+            services.AddSingleton<ICurrentUserService>(CurrentUser);
+            services.AddSingleton<IBoardRealtimeNotifier, NoOpBoardRealtimeNotifier>();
+
+            Services = services.BuildServiceProvider();
+
+            using var scope = Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<FlowBoardDbContext>();
+            await db.Database.MigrateAsync();
+
+            IsDockerAvailable = true;
+        }
+        catch (Exception ex) when (IsDockerUnavailable(ex))
+        {
+            IsDockerAvailable = false;
+        }
     }
 
     /// <summary>Sends a request through MediatR on a fresh DI scope (fresh DbContext), as the API would per request.</summary>
@@ -81,8 +103,14 @@ public sealed class SqlServerFixture : IAsyncLifetime
         if (Services is IAsyncDisposable disposable)
             await disposable.DisposeAsync();
 
-        await _container.DisposeAsync();
+        if (_container is not null)
+            await _container.DisposeAsync();
     }
+
+    private static bool IsDockerUnavailable(Exception ex) =>
+        ex is DockerUnavailableException ||
+        (ex is AggregateException aggregate && aggregate.InnerExceptions.Any(IsDockerUnavailable)) ||
+        (ex.InnerException is not null && IsDockerUnavailable(ex.InnerException));
 }
 
 [CollectionDefinition(nameof(SqlServerCollection))]

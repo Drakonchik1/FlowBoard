@@ -47,9 +47,11 @@ public sealed class BoardWorkflowTests(SqlServerFixture fixture)
         return (board.Id, listA.Id, listB.Id);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task GetBoard_ReturnsListsAndCardsInPositionOrder()
     {
+        Skip.IfNot(fixture.IsDockerAvailable, "Docker is not running — start Docker Desktop to run integration tests.");
+
         var (boardId, listAId, _) = await SeedBoardWithTwoListsAsync();
 
         var c1 = await fixture.SendAsync(new CreateCardCommand(listAId, "First", null));
@@ -66,9 +68,11 @@ public sealed class BoardWorkflowTests(SqlServerFixture fixture)
         AssertAscendingPositions(todo);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task MoveCard_ToTopOfList_ReordersCards()
     {
+        Skip.IfNot(fixture.IsDockerAvailable, "Docker is not running — start Docker Desktop to run integration tests.");
+
         var (boardId, listAId, _) = await SeedBoardWithTwoListsAsync();
 
         var c1 = await fixture.SendAsync(new CreateCardCommand(listAId, "First", null));
@@ -85,9 +89,11 @@ public sealed class BoardWorkflowTests(SqlServerFixture fixture)
         AssertAscendingPositions(todo);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task MoveCard_ToAnotherList_MovesAcrossColumns()
     {
+        Skip.IfNot(fixture.IsDockerAvailable, "Docker is not running — start Docker Desktop to run integration tests.");
+
         var (boardId, listAId, listBId) = await SeedBoardWithTwoListsAsync();
 
         var c1 = await fixture.SendAsync(new CreateCardCommand(listAId, "First", null));
@@ -103,9 +109,11 @@ public sealed class BoardWorkflowTests(SqlServerFixture fixture)
         Assert.Equal([c1.Id], done.Cards.Select(c => c.Id));
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task GetBoard_RespectsSoftDeletedListsAndCards()
     {
+        Skip.IfNot(fixture.IsDockerAvailable, "Docker is not running — start Docker Desktop to run integration tests.");
+
         var (boardId, listAId, listBId) = await SeedBoardWithTwoListsAsync();
         await fixture.SendAsync(new CreateCardCommand(listAId, "Visible", null));
 
