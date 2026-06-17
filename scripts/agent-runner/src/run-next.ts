@@ -36,7 +36,7 @@ import { loadState, saveState } from "./state.js";
 
 import { isCouncilTask } from "./types.js";
 
-import { publishTaskToGitHub } from "./git-publish.js";
+import { publishTaskToGitHub, shouldPublishToGit } from "./git-publish.js";
 
 import { runDotnetTest } from "./verify.js";
 
@@ -52,13 +52,15 @@ function parseArgs(argv: string[]) {
 
   const skipGit = argv.includes("--skip-git");
 
+  const forceGit = argv.includes("--force-git");
+
   const retryFailed = argv.includes("--retry-failed") || argv.includes("--retry");
 
   const rootFlag = argv.find((a) => a.startsWith("--root="));
 
   const projectRoot = rootFlag ? rootFlag.split("=")[1]! : resolveProjectRoot();
 
-  return { dryRun, verifyTests, skipGit, retryFailed, projectRoot };
+  return { dryRun, verifyTests, skipGit, forceGit, retryFailed, projectRoot };
 
 }
 
@@ -420,11 +422,20 @@ async function main() {
 
 
 
-  let gitSummary = args.skipGit ? "skipped (--skip-git)" : "skipped (task not done)";
+  const publishGit =
+    finalStatus === "done" &&
+    !args.skipGit &&
+    (args.forceGit || shouldPublishToGit(task));
 
-  if (finalStatus === "done" && !args.skipGit) {
+  let gitSummary = args.skipGit
+    ? "skipped (--skip-git)"
+    : finalStatus !== "done"
+      ? "skipped (task not done)"
+      : "skipped (local only — push on council-fix publish tasks)";
 
-    console.log("[agent-runner] Committing and pushing to GitHub…");
+  if (publishGit) {
+
+    console.log("[agent-runner] Committing and pushing council remediation to GitHub…");
 
     const gitResult = await publishTaskToGitHub(paths.root, task);
 

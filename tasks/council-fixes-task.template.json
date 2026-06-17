@@ -1,0 +1,12 @@
+{
+  "_comment": "Insert after sN-council in tasks[]. Agent-runner commits and pushes to GitHub when this task is done.",
+  "id": "sN-council-fixes",
+  "phase": "sprintN",
+  "gitPublish": true,
+  "title": "Fix Sprint N council security and bug findings",
+  "status": "pending",
+  "files": ["src/", "tests/", "SPRINT.md", "README.md"],
+  "doneWhen": "High/Medium findings from docs/council/sprint-N-report.md fixed or deferred with reason; dotnet test green",
+  "dontTouch": ["auth rotation semantics", "migrations without approval"],
+  "notes": "Git publish task — one push per sprint after council remediation."
+}

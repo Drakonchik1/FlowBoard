@@ -45,14 +45,36 @@ function parseStatusPath(line: string): string {
 }
 
 function inferCommitType(task: Task): string {
+  if (task.id === "close-docs" || task.id.endsWith("-council-fixes")) return "fix";
   if (isCouncilTask(task)) return "docs";
   if (task.id.endsWith("-docs")) return "docs";
   if (task.id.startsWith("close-")) return "fix";
   return "feat";
 }
 
+/** Push to GitHub only after council vulnerability remediation for a sprint (not every queue task). */
+export function shouldPublishToGit(task: Task): boolean {
+  if (task.gitPublish === true) return true;
+  if (task.gitPublish === false) return false;
+
+  // Closeout: push once after close-01…close-11 fixes land (close-docs updates SPRINT/README).
+  if (task.id === "close-docs") return true;
+
+  // Per-sprint: push after council finding fixes (add sN-council-fixes to queue or gitPublish: true).
+  if (/^s\d+-council-fixes$/.test(task.id)) return true;
+
+  return false;
+}
+
 export function buildCommitSubject(task: Task): string {
   const type = inferCommitType(task);
+  if (task.id === "close-docs") {
+    return `${type}(closeout): Council vulnerability fixes — Sprints 1–5 closed`;
+  }
+  if (/^s(\d+)-council-fixes$/.test(task.id)) {
+    const sprint = task.id.match(/^s(\d+)-/)?.[1];
+    return `${type}(s${sprint}-council-fixes): ${task.title}`;
+  }
   return `${type}(${task.id}): ${task.title}`;
 }
 

@@ -26,7 +26,11 @@ Set on each member in `tasks/queue.json`: `"scope": "project"`.
 
 ## Adding to a new sprint
 
-Copy the `s5-council` block from `tasks/queue.json` or `tasks/council-task.template.json`. Place it **after** the docs-sync / final housekeeping task. Update `outputFile` and sprint number in member work paths.
+1. Copy `tasks/council-task.template.json` → `sN-council` (read-only review).
+2. Add **`sN-council-fixes`** after council with `"gitPublish": true` — implement findings; agent-runner pushes to GitHub when done.
+3. Add `sN-docs` after fixes (docs only, no git publish).
+
+Place council **after** feature tasks, **before** council-fixes.
 
 ## Manual preview
 

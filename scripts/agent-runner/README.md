@@ -43,15 +43,22 @@ Docs: [cursor.com/docs/api/sdk/typescript](https://cursor.com/docs/api/sdk/types
 
 Each `Agent.create()` = **new agent** (fresh session). State carries forward via `HANDOFF.md`, `SPRINT.md`, `tasks/queue.json`.
 
-After a task is marked **done** and tests pass, the runner **commits and pushes** to `origin/<current-branch>`:
+After a **git publish task** is marked **done** and tests pass, the runner **commits and pushes** to `origin/<current-branch>`.
 
-| Task kind | Commit prefix | Example |
-|-----------|---------------|---------|
-| Feature (`s6-01`, …) | `feat(task-id):` | `feat(s6-01): Comments entity + CRUD API` |
-| Closeout (`close-01`, …) | `fix(task-id):` | `fix(close-01): Wire Redis in docker-compose API` |
-| Docs / council | `docs(task-id):` | `docs(s5-council): Live Council — Sprint 5` |
+Publish tasks (council vulnerability remediation — not every queue item):
 
-Skip with `--skip-git` (PowerShell: `-SkipGit`). Sensitive paths (`.env`, `secrets.json`) block the commit.
+| Task pattern | When |
+|--------------|------|
+| `close-docs` | After close-01…close-11 fixes; closes Sprints 1–5 |
+| `sN-council-fixes` | After Sprint N council findings are fixed |
+| `"gitPublish": true` | Explicit flag in `tasks/queue.json` |
+
+| Commit | Example |
+|--------|---------|
+| Closeout publish | `fix(closeout): Council vulnerability fixes — Sprints 1–5 closed` |
+| Sprint publish | `fix(s6-council-fixes): Fix Sprint 6 council security and bug findings` |
+
+Overrides: `--force-git` (push any done task), `--skip-git` / `-SkipGit` (never push). Sensitive paths (`.env`, `secrets.json`) block the commit.
 
 ### Live Council (sprint-end)
 

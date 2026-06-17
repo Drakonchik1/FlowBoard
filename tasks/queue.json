@@ -216,6 +216,7 @@
       "id": "close-docs",
       "phase": "closeout",
       "closesSprints": [1, 2, 3, 4, 5],
+      "gitPublish": true,
       "title": "Mark Sprints 1–5 fully closed in SPRINT.md + README",
       "status": "pending",
       "priority": "low",
@@ -351,6 +352,54 @@
       "doneWhen": "TestContainers tests for comment and tag workflows",
       "dontTouch": [],
       "notes": "Original Sprint 6."
+    },
+    {
+      "id": "s6-council",
+      "phase": "sprint6",
+      "kind": "council",
+      "title": "Live Council — Sprint 6 review (bugs + security + architecture)",
+      "status": "pending",
+      "files": ["src/", "tests/", "docker-compose.yml", "SECURITY.md", "SPRINT.md"],
+      "doneWhen": "docs/council/sprint-6-report.md exists with prioritized findings and file:line refs",
+      "dontTouch": ["application code — report only", "auth behavior changes", "migrations"],
+      "notes": "Read-only review after s6-07. Findings fixed in s6-council-fixes (git publish).",
+      "council": {
+        "outputFile": "docs/council/sprint-6-report.md",
+        "workDir": "docs/council/.work",
+        "members": [
+          {
+            "id": "bug-hunter",
+            "role": "Bug & logic reviewer",
+            "focus": "Logic errors, edge cases, test gaps, consistency across layers."
+          },
+          {
+            "id": "security-auditor",
+            "role": "Security reviewer",
+            "scope": "sprint",
+            "focus": "OWASP API Top 10 2023, ASVS L2, JWT/refresh, RBAC, injection, secrets."
+          },
+          {
+            "id": "architecture-guard",
+            "role": "Architecture reviewer",
+            "focus": "Clean Architecture boundaries, convention drift, scope creep."
+          }
+        ],
+        "synthesizer": {
+          "role": "Council chair",
+          "focus": "Merge, deduplicate, prioritize, list follow-up tasks for s6-council-fixes."
+        }
+      }
+    },
+    {
+      "id": "s6-council-fixes",
+      "phase": "sprint6",
+      "gitPublish": true,
+      "title": "Fix Sprint 6 council security and bug findings",
+      "status": "pending",
+      "files": ["src/", "tests/", "SPRINT.md", "README.md"],
+      "doneWhen": "High/Medium findings from docs/council/sprint-6-report.md fixed or deferred with reason; dotnet test green",
+      "dontTouch": ["auth rotation semantics", "migrations without approval"],
+      "notes": "Agent-runner commits and pushes to GitHub when this task is done."
     },
     {
       "id": "s6-docs",

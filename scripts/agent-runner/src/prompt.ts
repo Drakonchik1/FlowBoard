@@ -1,5 +1,5 @@
 import type { Task, TaskQueue } from "./types.js";
-import { buildCommitSubject } from "./git-publish.js";
+import { buildCommitSubject, shouldPublishToGit } from "./git-publish.js";
 
 export function buildTaskPrompt(
   task: Task,
@@ -42,20 +42,37 @@ ${task.dontTouch.map((d) => `- ${d}`).join("\n")}
 
 ${task.notes ? `## Notes\n\n${task.notes}\n` : ""}
 
-## Required before you finish
-
-1. Implement only this task — minimal diff, match existing conventions (.cursor/rules/flowboard.mdc).
-2. Run \`dotnet test\` and fix failures in scope.
-3. Update \`tasks/queue.json\`: set task \`${task.id}\` status to \`"done"\` (or \`"failed"\` with reason in notes if blocked).
-4. Update \`SPRINT.md\`: checklist, session log row, "Last updated" date.
-5. Update \`HANDOFF.md\`: what was done, test result, next task id.
-6. Do **not** run \`git commit\` or \`git push\` — agent-runner commits and pushes after this task (\`${buildCommitSubject(task)}\`).
-7. Do NOT start the next queued task in this session.
+${gitFinishInstructions(task)}
 
 ## Project goal
 
 ${queue.projectGoal}
 `;
+}
+
+function gitFinishInstructions(task: Task): string {
+  const lines = [
+    "## Required before you finish",
+    "",
+    "1. Implement only this task — minimal diff, match existing conventions (.cursor/rules/flowboard.mdc).",
+    "2. Run `dotnet test` and fix failures in scope.",
+    `3. Update \`tasks/queue.json\`: set task \`${task.id}\` status to \`"done"\` (or \`"failed"\` with reason in notes if blocked).`,
+    '4. Update `SPRINT.md`: checklist, session log row, "Last updated" date.',
+    "5. Update `HANDOFF.md`: what was done, test result, next task id.",
+  ];
+
+  if (shouldPublishToGit(task)) {
+    lines.push(
+      `6. Do **not** run \`git commit\` or \`git push\` — agent-runner publishes after this council-fix task (\`${buildCommitSubject(task)}\`).`
+    );
+  } else {
+    lines.push(
+      "6. Do **not** run `git commit` or `git push` — changes stay local until the sprint council-fix publish task (`close-docs`, `sN-council-fixes`, or `gitPublish: true` in queue)."
+    );
+  }
+
+  lines.push("7. Do NOT start the next queued task in this session.");
+  return lines.join("\n");
 }
 
 function truncate(text: string, max: number): string {

@@ -12,7 +12,7 @@ alwaysApply: true
 3. Use `@` on specific files, not whole codebase.
 4. Run `dotnet test` before finishing.
 5. When done: update `tasks/queue.json` status, `HANDOFF.md`, and `SPRINT.md` session log.
-6. **Commit + push to GitHub** after each queue task — message: `type(task-id): title` (e.g. `fix(close-01): Wire Redis in compose`). Manual chat: you commit and `git push`. Automated: agent-runner does this when task is `done`.
+6. **Git push** only after council vulnerability fixes for a sprint — `close-docs`, `sN-council-fixes`, or `"gitPublish": true` in queue. Intermediate tasks stay local. Manual chat: you push on those publish tasks only.
 
 ## Stack
 

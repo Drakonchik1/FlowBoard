@@ -31,6 +31,8 @@ export interface Task {
   title: string;
   status: TaskStatus;
   kind?: TaskKind;
+  /** When true, agent-runner commits and pushes to GitHub after this task is done. */
+  gitPublish?: boolean;
   files: string[];
   doneWhen: string;
   dontTouch: string[];

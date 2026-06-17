@@ -9,17 +9,19 @@ function parseArgs(argv: string[]) {
   const max = Number(argv.find((a) => a.startsWith("--max="))?.split("=")[1] ?? "3");
   const dryRun = argv.includes("--dry-run");
   const skipGit = argv.includes("--skip-git");
+  const forceGit = argv.includes("--force-git");
   const rootFlag = argv.find((a) => a.startsWith("--root="));
   const projectRoot = rootFlag ? rootFlag.split("=")[1]! : resolveProjectRoot();
-  return { max: Math.max(1, max), dryRun, skipGit, projectRoot };
+  return { max: Math.max(1, max), dryRun, skipGit, forceGit, projectRoot };
 }
 
-function runNext(dryRun: boolean, skipGit: boolean): Promise<number> {
+function runNext(dryRun: boolean, skipGit: boolean, forceGit: boolean): Promise<number> {
   const scriptDir = dirname(fileURLToPath(import.meta.url));
   const runNextScript = join(scriptDir, "run-next.ts");
   const args = ["tsx", runNextScript];
   if (dryRun) args.push("--dry-run");
   if (skipGit) args.push("--skip-git");
+  if (forceGit) args.push("--force-git");
 
   return new Promise((resolve) => {
     const child = spawn("npx", args, {
@@ -32,7 +34,7 @@ function runNext(dryRun: boolean, skipGit: boolean): Promise<number> {
 }
 
 async function main() {
-  const { max, dryRun, skipGit, projectRoot } = parseArgs(process.argv.slice(2));
+  const { max, dryRun, skipGit, forceGit, projectRoot } = parseArgs(process.argv.slice(2));
   const paths = projectPaths(projectRoot);
 
   console.log(`[agent-runner] Loop: up to ${max} task(s)${dryRun ? " (dry-run)" : ""}`);
@@ -46,7 +48,7 @@ async function main() {
     }
 
     console.log(`\n[agent-runner] === iteration ${i + 1}/${max}: ${next.id} ===\n`);
-    const code = await runNext(dryRun, skipGit);
+    const code = await runNext(dryRun, skipGit, forceGit);
     if (code !== 0 && !dryRun) {
       console.error(`[agent-runner] Stopping loop after exit code ${code}`);
       process.exit(code);
