@@ -1,6 +1,6 @@
+using FlowBoard.Application.Common.Events;
 using FlowBoard.Application.Common.Exceptions;
 using FlowBoard.Domain.Common;
-using FlowBoard.Domain.Events;
 using FlowBoard.Domain.Interfaces;
 using MediatR;
 using Microsoft.Data.SqlClient;
@@ -57,13 +57,4 @@ internal sealed class UnitOfWork(FlowBoardDbContext context, IPublisher publishe
 
         return false;
     }
-}
-
-/// <summary>
-/// Wraps any IDomainEvent as a MediatR INotification.
-/// Keeps Domain free of MediatR dependency while allowing Infrastructure to dispatch via IPublisher.
-/// </summary>
-internal sealed record DomainEventNotification(IDomainEvent DomainEvent) : INotification
-{
-    public static DomainEventNotification Wrap(IDomainEvent domainEvent) => new(domainEvent);
 }

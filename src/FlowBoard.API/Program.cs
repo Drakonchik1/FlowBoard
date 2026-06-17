@@ -1,6 +1,7 @@
 using System.Net;
 using System.Threading.RateLimiting;
 using FlowBoard.API.Configuration;
+using FlowBoard.API.Hubs;
 using FlowBoard.API.Middleware;
 using FlowBoard.API.OpenApi;
 using FlowBoard.API.Services;
@@ -18,10 +19,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddJwtBearerProblemDetails();
+builder.Services.AddJwtBearerSignalR();
 
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddSingleton<IBoardRealtimeNotifier, BoardRealtimeNotifier>();
 
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<FlowBoardDbContext>(
@@ -123,6 +127,7 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<BoardHub>("/hubs/board");
 
 app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
