@@ -21,13 +21,15 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddJwtBearerProblemDetails();
 builder.Services.AddJwtBearerSignalR();
 
+var redisConnection = builder.Configuration.GetRedisConnectionString();
+
 builder.Services.AddControllers();
-builder.Services.AddSignalRWithOptionalRedisBackplane(builder.Configuration);
+builder.Services.AddSignalRWithOptionalRedisBackplane(redisConnection);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddSingleton<BoardGroupMembershipRegistry>();
 builder.Services.AddSingleton<IBoardRealtimeNotifier, BoardRealtimeNotifier>();
-
-var redisConnection = builder.Configuration.GetRedisConnectionString();
+builder.Services.AddSingleton<IBoardRealtimeGroupEvictor, BoardRealtimeGroupEvictor>();
 
 var healthChecks = builder.Services.AddHealthChecks()
     .AddDbContextCheck<FlowBoardDbContext>(

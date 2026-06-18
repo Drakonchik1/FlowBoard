@@ -30,6 +30,8 @@ public sealed class SqlServerFixture : IAsyncLifetime
 
     public TestCurrentUserService CurrentUser { get; } = new();
 
+    public CapturingBoardRealtimeNotifier RealtimeNotifier { get; } = new();
+
     public async Task InitializeAsync()
     {
         try
@@ -60,7 +62,8 @@ public sealed class SqlServerFixture : IAsyncLifetime
             services.AddApplication();
             services.AddInfrastructure(configuration);
             services.AddSingleton<ICurrentUserService>(CurrentUser);
-            services.AddSingleton<IBoardRealtimeNotifier, NoOpBoardRealtimeNotifier>();
+            services.AddSingleton<IBoardRealtimeNotifier>(RealtimeNotifier);
+            services.AddSingleton<IBoardRealtimeGroupEvictor, NoOpBoardRealtimeGroupEvictor>();
 
             Services = services.BuildServiceProvider();
 

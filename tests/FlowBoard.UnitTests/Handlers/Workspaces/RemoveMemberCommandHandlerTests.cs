@@ -13,9 +13,10 @@ public sealed class RemoveMemberCommandHandlerTests
     private readonly Mock<IWorkspaceRepository> _workspaceRepo = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
+    private readonly Mock<IBoardRealtimeGroupEvictor> _groupEvictor = new();
 
     private RemoveMemberCommandHandler CreateHandler() =>
-        new(_workspaceRepo.Object, _unitOfWork.Object, _currentUser.Object);
+        new(_workspaceRepo.Object, _unitOfWork.Object, _currentUser.Object, _groupEvictor.Object);
 
     [Fact]
     public async Task Handle_MemberLeaves_RemovesSelf()
@@ -33,6 +34,9 @@ public sealed class RemoveMemberCommandHandlerTests
 
         Assert.DoesNotContain(workspace.Members, m => m.UserId == memberId);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _groupEvictor.Verify(
+            e => e.EvictUserFromBoardGroupsAsync(memberId, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -50,6 +54,9 @@ public sealed class RemoveMemberCommandHandlerTests
         await CreateHandler().Handle(new RemoveMemberCommand(workspace.Id, memberId), CancellationToken.None);
 
         Assert.DoesNotContain(workspace.Members, m => m.UserId == memberId);
+        _groupEvictor.Verify(
+            e => e.EvictUserFromBoardGroupsAsync(memberId, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]

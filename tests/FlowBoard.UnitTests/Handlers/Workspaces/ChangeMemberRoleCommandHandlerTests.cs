@@ -14,9 +14,10 @@ public sealed class ChangeMemberRoleCommandHandlerTests
     private readonly Mock<IWorkspaceRepository> _workspaceRepo = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
+    private readonly Mock<IBoardRealtimeGroupEvictor> _groupEvictor = new();
 
     private ChangeMemberRoleCommandHandler CreateHandler() =>
-        new(_workspaceRepo.Object, _unitOfWork.Object, _currentUser.Object);
+        new(_workspaceRepo.Object, _unitOfWork.Object, _currentUser.Object, _groupEvictor.Object);
 
     [Fact]
     public async Task Handle_Admin_ChangesRole()
@@ -35,6 +36,30 @@ public sealed class ChangeMemberRoleCommandHandlerTests
             CancellationToken.None);
 
         Assert.Equal("Admin", result.Role);
+        _groupEvictor.Verify(
+            e => e.EvictUserFromBoardGroupsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_DowngradeToViewer_EvictsBoardGroups()
+    {
+        var ownerId = Guid.NewGuid();
+        var memberId = Guid.NewGuid();
+        var workspace = Workspace.Create("Acme", WorkspaceSlug.Create("acme"), ownerId);
+        workspace.InviteMember(memberId, WorkspaceMemberRole.Member);
+
+        _currentUser.Setup(c => c.UserId).Returns(ownerId);
+        _workspaceRepo.Setup(r => r.GetByIdWithMembersAsync(workspace.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(workspace);
+
+        await CreateHandler().Handle(
+            new ChangeMemberRoleCommand(workspace.Id, memberId, WorkspaceRole.Viewer),
+            CancellationToken.None);
+
+        _groupEvictor.Verify(
+            e => e.EvictUserFromBoardGroupsAsync(memberId, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]

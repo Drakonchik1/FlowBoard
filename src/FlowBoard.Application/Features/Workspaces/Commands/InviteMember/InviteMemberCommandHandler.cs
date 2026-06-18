@@ -20,14 +20,14 @@ public sealed class InviteMemberCommandHandler(
     {
         var actorId = currentUser.UserId ?? throw new UnauthorizedException("You must be authenticated.");
 
-        // Verify the invitee actually exists (avoids creating dangling memberships)
-        var invitee = await userRepository.GetByIdAsync(request.UserId, cancellationToken)
-            ?? throw new NotFoundException("User", request.UserId);
-
         var workspace = await workspaceRepository.GetByIdWithMembersAsync(request.WorkspaceId, cancellationToken)
             ?? throw new NotFoundException("Workspace", request.WorkspaceId);
 
         WorkspaceAccess.EnsureAdminOrNotFound(workspace, actorId, request.WorkspaceId);
+
+        // Missing invitee returns the same workspace 404 so admins cannot probe valid user IDs.
+        var invitee = await userRepository.GetByIdAsync(request.UserId, cancellationToken)
+            ?? throw new NotFoundException("Workspace", request.WorkspaceId);
 
         if (workspace.HasMember(invitee.Id))
             throw new ConflictException("User is already a member of this workspace.");

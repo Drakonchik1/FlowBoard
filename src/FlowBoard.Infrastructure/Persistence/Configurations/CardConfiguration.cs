@@ -34,10 +34,13 @@ internal sealed class CardConfiguration : IEntityTypeConfiguration<Card>
 
         builder.Property(c => c.IsDeleted).HasDefaultValue(false).IsRequired();
         builder.Property(c => c.CreatedAt).IsRequired();
-        builder.Property(c => c.UpdatedAt).IsRequired();
+        builder.Property(c => c.UpdatedAt).IsConcurrencyToken().IsRequired();
 
-        // Per-list ordering reads, and board-wide reads for the Dapper GetBoard query
-        builder.HasIndex(c => new { c.BoardListId, c.Position });
+        // Per-list ordering reads, and board-wide reads for the Dapper GetBoard query.
+        // Unique among active cards so concurrent moves cannot persist duplicate positions.
+        builder.HasIndex(c => new { c.BoardListId, c.Position })
+            .IsUnique()
+            .HasFilter("[IsDeleted] = 0");
         builder.HasIndex(c => c.BoardId);
 
         builder.HasOne<BoardList>()

@@ -53,4 +53,40 @@ public sealed class CreateBoardListCommandHandlerTests
         await Assert.ThrowsAsync<NotFoundException>(() =>
             CreateHandler().Handle(new CreateBoardListCommand(Guid.NewGuid(), "List"), CancellationToken.None));
     }
+
+    [Fact]
+    public async Task Handle_NonMember_Throws404()
+    {
+        var ownerId = Guid.NewGuid();
+        var workspace = Workspace.Create("Acme", WorkspaceSlug.FromName("acme"), ownerId);
+        var board = Board.Create(Guid.NewGuid(), workspace.Id, "Board");
+
+        _currentUser.Setup(c => c.UserId).Returns(Guid.NewGuid());
+        _boardRepo.Setup(r => r.GetByIdAsync(board.Id, It.IsAny<CancellationToken>())).ReturnsAsync(board);
+        _workspaceRepo.Setup(r => r.GetByIdWithMembersAsync(workspace.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(workspace);
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            CreateHandler().Handle(new CreateBoardListCommand(board.Id, "List"), CancellationToken.None));
+
+        _listRepo.Verify(r => r.AddAsync(It.IsAny<BoardList>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_Viewer_Throws403()
+    {
+        var ownerId = Guid.NewGuid();
+        var viewerId = Guid.NewGuid();
+        var workspace = Workspace.Create("Acme", WorkspaceSlug.FromName("acme"), ownerId);
+        workspace.InviteMember(viewerId, WorkspaceMemberRole.Viewer);
+        var board = Board.Create(Guid.NewGuid(), workspace.Id, "Board");
+
+        _currentUser.Setup(c => c.UserId).Returns(viewerId);
+        _boardRepo.Setup(r => r.GetByIdAsync(board.Id, It.IsAny<CancellationToken>())).ReturnsAsync(board);
+        _workspaceRepo.Setup(r => r.GetByIdWithMembersAsync(workspace.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(workspace);
+
+        await Assert.ThrowsAsync<ForbiddenException>(() =>
+            CreateHandler().Handle(new CreateBoardListCommand(board.Id, "List"), CancellationToken.None));
+    }
 }

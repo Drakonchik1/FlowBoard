@@ -1,9 +1,11 @@
+using FlowBoard.Application.Common.Exceptions;
 using FlowBoard.Application.Common.Interfaces;
 using FlowBoard.Application.Features.Cards.Commands.MoveCard;
 using FlowBoard.Domain.Entities;
 using FlowBoard.Domain.Exceptions;
 using FlowBoard.Domain.Interfaces;
 using FlowBoard.Domain.ValueObjects;
+using FluentValidation.TestHelper;
 using Moq;
 
 namespace FlowBoard.UnitTests.Handlers.Cards;
@@ -76,7 +78,7 @@ public sealed class MoveCardCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_TargetListOnDifferentBoard_Throws()
+    public async Task Handle_TargetListOnDifferentBoard_ThrowsNotFound()
     {
         var ownerId = Guid.NewGuid();
         var (_, board) = Arrange(ownerId);
@@ -87,12 +89,32 @@ public sealed class MoveCardCommandHandlerTests
         _cardRepo.Setup(r => r.GetByIdAsync(card.Id, It.IsAny<CancellationToken>())).ReturnsAsync(card);
         _listRepo.Setup(r => r.GetByIdAsync(foreignList.Id, It.IsAny<CancellationToken>())).ReturnsAsync(foreignList);
 
-        await Assert.ThrowsAsync<DomainException>(() =>
+        await Assert.ThrowsAsync<NotFoundException>(() =>
             CreateHandler().Handle(new MoveCardCommand(card.Id, foreignList.Id, null, null), CancellationToken.None));
     }
 
     [Fact]
-    public async Task Handle_NeighbourNotInTargetList_Throws()
+    public async Task Handle_MissingNeighbour_ThrowsNotFound()
+    {
+        var ownerId = Guid.NewGuid();
+        var (_, board) = Arrange(ownerId);
+
+        var list = BoardList.Create(board.Id, "A", FractionalIndex.Start());
+        var card = Card.Create(board.Id, list.Id, "Card", FractionalIndex.Start());
+        var missingNeighbourId = Guid.NewGuid();
+
+        _cardRepo.Setup(r => r.GetByIdAsync(card.Id, It.IsAny<CancellationToken>())).ReturnsAsync(card);
+        _cardRepo.Setup(r => r.GetByIdAsync(missingNeighbourId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Card?)null);
+        _listRepo.Setup(r => r.GetByIdAsync(list.Id, It.IsAny<CancellationToken>())).ReturnsAsync(list);
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            CreateHandler().Handle(
+                new MoveCardCommand(card.Id, list.Id, missingNeighbourId, null), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Handle_NeighbourNotInTargetList_ThrowsNotFound()
     {
         var ownerId = Guid.NewGuid();
         var (_, board) = Arrange(ownerId);
@@ -105,8 +127,93 @@ public sealed class MoveCardCommandHandlerTests
         _cardRepo.Setup(r => r.GetByIdAsync(strayNeighbour.Id, It.IsAny<CancellationToken>())).ReturnsAsync(strayNeighbour);
         _listRepo.Setup(r => r.GetByIdAsync(list.Id, It.IsAny<CancellationToken>())).ReturnsAsync(list);
 
-        await Assert.ThrowsAsync<DomainException>(() =>
+        await Assert.ThrowsAsync<NotFoundException>(() =>
             CreateHandler().Handle(
                 new MoveCardCommand(card.Id, list.Id, strayNeighbour.Id, null), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Handle_ConcurrencyConflict_RetriesAndSucceeds()
+    {
+        var ownerId = Guid.NewGuid();
+        var (_, board) = Arrange(ownerId);
+
+        var listA = BoardList.Create(board.Id, "A", FractionalIndex.Start());
+        var listB = BoardList.Create(board.Id, "B", FractionalIndex.Between(listA.Position, null));
+        var card = Card.Create(board.Id, listA.Id, "Card", FractionalIndex.Start());
+
+        _cardRepo.Setup(r => r.GetByIdAsync(card.Id, It.IsAny<CancellationToken>())).ReturnsAsync(card);
+        _listRepo.Setup(r => r.GetByIdAsync(listB.Id, It.IsAny<CancellationToken>())).ReturnsAsync(listB);
+
+        var saveAttempts = 0;
+        _unitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Returns(() =>
+            {
+                saveAttempts++;
+                if (saveAttempts == 1)
+                    throw new ConflictException("A resource with this value already exists.");
+                return Task.FromResult(1);
+            });
+
+        var result = await CreateHandler().Handle(
+            new MoveCardCommand(card.Id, listB.Id, null, null), CancellationToken.None);
+
+        Assert.Equal(listB.Id, result.BoardListId);
+        Assert.Equal(2, saveAttempts);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task Handle_NonMember_Throws404()
+    {
+        var ownerId = Guid.NewGuid();
+        var (_, board) = Arrange(ownerId);
+
+        var list = BoardList.Create(board.Id, "A", FractionalIndex.Start());
+        var card = Card.Create(board.Id, list.Id, "Card", FractionalIndex.Start());
+
+        _currentUser.Setup(c => c.UserId).Returns(Guid.NewGuid());
+        _cardRepo.Setup(r => r.GetByIdAsync(card.Id, It.IsAny<CancellationToken>())).ReturnsAsync(card);
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            CreateHandler().Handle(new MoveCardCommand(card.Id, list.Id, null, null), CancellationToken.None));
+
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_Viewer_Throws403()
+    {
+        var ownerId = Guid.NewGuid();
+        var viewerId = Guid.NewGuid();
+        var (ws, board) = Arrange(ownerId);
+        ws.InviteMember(viewerId, WorkspaceMemberRole.Viewer);
+
+        var list = BoardList.Create(board.Id, "A", FractionalIndex.Start());
+        var card = Card.Create(board.Id, list.Id, "Card", FractionalIndex.Start());
+
+        _currentUser.Setup(c => c.UserId).Returns(viewerId);
+        _cardRepo.Setup(r => r.GetByIdAsync(card.Id, It.IsAny<CancellationToken>())).ReturnsAsync(card);
+
+        await Assert.ThrowsAsync<ForbiddenException>(() =>
+            CreateHandler().Handle(new MoveCardCommand(card.Id, list.Id, null, null), CancellationToken.None));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Validator_RejectsEmptyGuidNeighbourIds(bool beforeCard)
+    {
+        var validator = new MoveCardCommandValidator();
+        var command = beforeCard
+            ? new MoveCardCommand(Guid.NewGuid(), Guid.NewGuid(), Guid.Empty, null)
+            : new MoveCardCommand(Guid.NewGuid(), Guid.NewGuid(), null, Guid.Empty);
+
+        var result = validator.TestValidate(command);
+
+        if (beforeCard)
+            result.ShouldHaveValidationErrorFor(x => x.BeforeCardId);
+        else
+            result.ShouldHaveValidationErrorFor(x => x.AfterCardId);
     }
 }

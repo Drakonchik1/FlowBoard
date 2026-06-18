@@ -21,6 +21,7 @@ ASP.NET Core 10 · Clean Architecture · MediatR · FluentValidation · EF Core 
 ## Code conventions
 
 - **Handlers:** one command/query per folder under `Features/{Area}/`
+- **Domain-event notifications:** `INotificationHandler<DomainEventNotification>` under `EventHandlers/` (not CQRS commands/queries)
 - **Validators:** `*CommandValidator` / `*QueryValidator` in same folder as handler
 - **Controllers:** thin — `ISender.Send` only, no business logic
 - **Domain:** no NuGet deps; use factory methods on entities (`User.Create`, etc.)

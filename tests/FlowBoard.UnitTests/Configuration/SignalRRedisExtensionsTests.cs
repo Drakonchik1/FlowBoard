@@ -1,9 +1,11 @@
 using FlowBoard.API.Configuration;
 using FlowBoard.API.Hubs;
-using FlowBoard.Domain.Interfaces;
+using FlowBoard.API.Services;
+using MediatR;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.SignalR.StackExchangeRedis;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Moq;
 
 namespace FlowBoard.UnitTests.Configuration;
@@ -11,50 +13,49 @@ namespace FlowBoard.UnitTests.Configuration;
 public sealed class SignalRRedisExtensionsTests
 {
     [Fact]
-    public void AddSignalRWithOptionalRedisBackplane_WithoutRedisConnectionString_RegistersBoardHub()
+    public void AddSignalRWithOptionalRedisBackplane_WithoutRedisConnectionString_RegistersBoardHubWithoutRedisOptions()
     {
-        var configuration = new ConfigurationBuilder().Build();
-        var services = CreateServices(configuration);
+        var services = CreateServices(redisConnectionString: null);
         var provider = services.BuildServiceProvider();
 
         var hubContext = provider.GetRequiredService<IHubContext<BoardHub, IBoardHubClient>>();
         var hub = ActivatorUtilities.CreateInstance<BoardHub>(provider);
-        var lifetimeManager = provider.GetRequiredService<HubLifetimeManager<BoardHub>>();
 
         Assert.NotNull(hubContext);
         Assert.NotNull(hub);
-        Assert.DoesNotContain("Redis", lifetimeManager.GetType().Name, StringComparison.Ordinal);
+        var redisOptions = provider.GetService<IOptions<RedisOptions>>();
+        if (redisOptions?.Value.Configuration is { } redisConfiguration)
+            Assert.Empty(redisConfiguration.EndPoints);
     }
 
     [Fact]
-    public void AddSignalRWithOptionalRedisBackplane_WithRedisConnectionString_RegistersBoardHubWithBackplane()
+    public void AddSignalRWithOptionalRedisBackplane_WithRedisConnectionString_RegistersBoardHubWithBackplaneOptions()
     {
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["ConnectionStrings:Redis"] = "localhost:6379,abortConnect=false"
-            })
-            .Build();
+        const string connectionString = "localhost:6379,abortConnect=false";
 
-        var services = CreateServices(configuration);
+        var services = CreateServices(connectionString);
         var provider = services.BuildServiceProvider();
 
         var hubContext = provider.GetRequiredService<IHubContext<BoardHub, IBoardHubClient>>();
         var hub = ActivatorUtilities.CreateInstance<BoardHub>(provider);
-        var lifetimeManager = provider.GetRequiredService<HubLifetimeManager<BoardHub>>();
+        var redisOptions = provider.GetRequiredService<IOptions<RedisOptions>>().Value;
 
         Assert.NotNull(hubContext);
         Assert.NotNull(hub);
-        Assert.Contains("Redis", lifetimeManager.GetType().Name, StringComparison.Ordinal);
+        Assert.NotNull(redisOptions.Configuration);
+        var endpoint = Assert.IsType<System.Net.DnsEndPoint>(Assert.Single(redisOptions.Configuration!.EndPoints));
+        Assert.Equal("localhost", endpoint.Host);
+        Assert.Equal(6379, endpoint.Port);
+        Assert.False(redisOptions.Configuration.AbortOnConnectFail);
     }
 
-    private static ServiceCollection CreateServices(IConfiguration configuration)
+    private static ServiceCollection CreateServices(string? redisConnectionString)
     {
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddSingleton(Mock.Of<IBoardRepository>());
-        services.AddSingleton(Mock.Of<IWorkspaceRepository>());
-        services.AddSignalRWithOptionalRedisBackplane(configuration);
+        services.AddSingleton(Mock.Of<ISender>());
+        services.AddSingleton<BoardGroupMembershipRegistry>();
+        services.AddSignalRWithOptionalRedisBackplane(redisConnectionString);
         return services;
     }
 }

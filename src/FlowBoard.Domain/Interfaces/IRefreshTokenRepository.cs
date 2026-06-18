@@ -15,6 +15,13 @@ public interface IRefreshTokenRepository : IRepository<RefreshToken>
     Task<RefreshToken?> GetByHashAsync(string tokenHash, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Finds a token by hash while holding an update lock until the surrounding transaction completes.
+    /// Serializes concurrent refresh rotation on the same token.
+    /// </summary>
+    Task<RefreshToken?> GetByHashWithUpdateLockAsync(
+        string tokenHash, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Revokes all tokens belonging to the same family.
     /// Called on token reuse detection to invalidate a potentially compromised session.
     /// </summary>

@@ -3,6 +3,7 @@ using FlowBoard.Application.Features.Boards.Commands.CreateBoard;
 using FlowBoard.Application.Features.Boards.Queries.GetBoard;
 using FlowBoard.Application.Features.BoardLists.Commands.CreateBoardList;
 using FlowBoard.Application.Features.Cards.Commands.CreateCard;
+using FlowBoard.Application.Features.Cards.Commands.DeleteCard;
 using FlowBoard.Application.Features.Cards.Commands.MoveCard;
 using FlowBoard.Application.Features.Projects.Commands.CreateProject;
 using FlowBoard.Application.Features.Workspaces.Commands.CreateWorkspace;
@@ -129,6 +130,75 @@ public sealed class BoardWorkflowTests(SqlServerFixture fixture)
 
         Assert.Single(board.Lists);
         Assert.Equal(listAId, board.Lists[0].Id);
+    }
+
+    [SkippableFact]
+    public async Task GetBoard_RespectsSoftDeletedCards()
+    {
+        Skip.IfNot(fixture.IsDockerAvailable, "Docker is not running — start Docker Desktop to run integration tests.");
+
+        var (boardId, listAId, _) = await SeedBoardWithTwoListsAsync();
+        var visible = await fixture.SendAsync(new CreateCardCommand(listAId, "Visible", null));
+        var deleted = await fixture.SendAsync(new CreateCardCommand(listAId, "Deleted", null));
+
+        await fixture.SendAsync(new DeleteCardCommand(deleted.Id));
+
+        var board = await fixture.SendAsync(new GetBoardQuery(boardId));
+        var todo = board.Lists.First(l => l.Id == listAId);
+
+        Assert.Single(todo.Cards);
+        Assert.Equal(visible.Id, todo.Cards[0].Id);
+    }
+
+    [SkippableFact]
+    public async Task MoveCard_InvokesCardMovedNotifierAfterCommit()
+    {
+        Skip.IfNot(fixture.IsDockerAvailable, "Docker is not running — start Docker Desktop to run integration tests.");
+
+        var (boardId, listAId, _) = await SeedBoardWithTwoListsAsync();
+        var c1 = await fixture.SendAsync(new CreateCardCommand(listAId, "First", null));
+        var c3 = await fixture.SendAsync(new CreateCardCommand(listAId, "Third", null));
+
+        fixture.RealtimeNotifier.Clear();
+
+        await fixture.SendAsync(new MoveCardCommand(c3.Id, listAId, null, c1.Id));
+
+        var events = fixture.RealtimeNotifier.Events;
+        Assert.Single(events);
+        Assert.Equal(c3.Id, events[0].CardId);
+        Assert.Equal(boardId, events[0].BoardId);
+        Assert.Equal(listAId, events[0].FromListId);
+        Assert.Equal(listAId, events[0].ToListId);
+        Assert.False(string.IsNullOrEmpty(events[0].Position));
+    }
+
+    [SkippableFact]
+    public async Task MoveCard_ConcurrentMoves_ProduceValidOrderWithoutDuplicates()
+    {
+        Skip.IfNot(fixture.IsDockerAvailable, "Docker is not running — start Docker Desktop to run integration tests.");
+
+        var (boardId, listAId, listBId) = await SeedBoardWithTwoListsAsync();
+        var c1 = await fixture.SendAsync(new CreateCardCommand(listAId, "First", null));
+        var c2 = await fixture.SendAsync(new CreateCardCommand(listAId, "Second", null));
+        var c3 = await fixture.SendAsync(new CreateCardCommand(listAId, "Third", null));
+
+        // Cross-list and same-list moves in parallel — distinct targets avoid duplicate-position
+        // collisions on the unique (BoardListId, Position) index.
+        var moveC1 = fixture.SendAsync(new MoveCardCommand(c1.Id, listBId, null, null));
+        var moveC2 = fixture.SendAsync(new MoveCardCommand(c2.Id, listAId, null, c3.Id));
+        await Task.WhenAll(moveC1, moveC2);
+
+        var board = await fixture.SendAsync(new GetBoardQuery(boardId));
+        var todo = board.Lists.First(l => l.Id == listAId);
+        var done = board.Lists.First(l => l.Id == listBId);
+
+        Assert.Equal(2, todo.Cards.Count);
+        Assert.Single(done.Cards);
+        AssertAscendingPositions(todo);
+        AssertAscendingPositions(done);
+
+        var allPositions = todo.Cards.Concat(done.Cards).Select(c => (c.BoardListId, c.Position)).ToList();
+        Assert.Equal(allPositions.Count, allPositions.Distinct().Count());
     }
 
     private static void AssertAscendingPositions(BoardListViewDto list)

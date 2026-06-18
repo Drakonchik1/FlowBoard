@@ -17,7 +17,20 @@ internal sealed class RefreshTokenRepository(FlowBoardDbContext context)
     public async Task<RefreshToken?> GetByHashAsync(
         string tokenHash, CancellationToken cancellationToken = default) =>
         await DbSet
+            .AsNoTracking()
             .FirstOrDefaultAsync(rt => rt.TokenHash == tokenHash, cancellationToken);
+
+    public async Task<RefreshToken?> GetByHashWithUpdateLockAsync(
+        string tokenHash, CancellationToken cancellationToken = default) =>
+        await DbSet
+            .FromSqlInterpolated($"""
+                SELECT Id, UserId, TokenHash, FamilyId, ExpiresAt, IsRevoked, CreatedAt
+                FROM refresh_tokens WITH (UPDLOCK, ROWLOCK)
+                WHERE TokenHash = {tokenHash}
+                """)
+            .IgnoreQueryFilters()
+            .AsTracking()
+            .FirstOrDefaultAsync(cancellationToken);
 
     public async Task RevokeEntireFamilyAsync(Guid familyId, CancellationToken cancellationToken = default)
     {

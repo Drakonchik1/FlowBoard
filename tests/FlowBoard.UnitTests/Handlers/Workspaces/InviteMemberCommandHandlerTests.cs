@@ -69,16 +69,25 @@ public sealed class InviteMemberCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_InviteeNotFound_Throws404()
+    public async Task Handle_InviteeNotFound_ReturnsWorkspace404ToPreventEnumeration()
     {
-        _currentUser.Setup(c => c.UserId).Returns(Guid.NewGuid());
+        var ownerId = Guid.NewGuid();
+        var workspace = WorkspaceWithOwner(ownerId);
+        var workspaceId = workspace.Id;
+
+        _currentUser.Setup(c => c.UserId).Returns(ownerId);
         _userRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((User?)null);
+        _workspaceRepo.Setup(r => r.GetByIdWithMembersAsync(workspaceId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(workspace);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
+        var ex = await Assert.ThrowsAsync<NotFoundException>(() =>
             CreateHandler().Handle(
-                new InviteMemberCommand(Guid.NewGuid(), Guid.NewGuid(), WorkspaceRole.Member),
+                new InviteMemberCommand(workspaceId, Guid.NewGuid(), WorkspaceRole.Member),
                 CancellationToken.None));
+
+        Assert.Contains(workspaceId.ToString(), ex.Message);
+        Assert.DoesNotContain("User", ex.Message);
     }
 
     [Fact]

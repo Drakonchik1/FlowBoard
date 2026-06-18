@@ -11,9 +11,9 @@ FlowBoard — ASP.NET Core 10 Kanban API (Clean Architecture, JWT, RBAC, SignalR
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-17 |
-| **Task ID** | s5-council |
-| **Result** | Live Council completed — see docs/council/sprint-5-report.md |
+| **Date** | 2026-06-18 |
+| **Task ID** | close-council |
+| **Result** | Live Council completed — see docs/council/closeout-report.md — git publish failed: Refusing to commit sensitive file: .env.example |
 | **Tests** | skipped (council — read-only review) |
 
 ## Decisions made (carry forward)
@@ -23,13 +23,13 @@ FlowBoard — ASP.NET Core 10 Kanban API (Clean Architecture, JWT, RBAC, SignalR
 
 ## What was done
 
-**s5-council:** Live Council — Sprint 5 closeout (full-project security + sprint bugs/arch)
+**close-council:** Live Council — closeout verification (Sprints 1–5)
 
-Live Council completed — see docs/council/sprint-5-report.md
+Live Council completed — see docs/council/closeout-report.md — git publish failed: Refusing to commit sensitive file: .env.example
 
 ## Next task
 
-Queue complete for current sprint — add tasks to `tasks/queue.json`.
+Queue: `tasks/queue.json` — next pending: **s6-01**
 
 ## Blockers / open questions
 
@@ -37,6 +37,6 @@ _(agent: update if any)_
 
 ## Files touched last run
 
-- `docs/council/sprint-5-report.md`
+- `docs/council/closeout-report.md`
 - `SPRINT.md`
 - `HANDOFF.md`

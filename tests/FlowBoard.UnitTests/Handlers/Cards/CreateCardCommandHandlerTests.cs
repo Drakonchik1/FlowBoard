@@ -82,4 +82,44 @@ public sealed class CreateCardCommandHandlerTests
         await Assert.ThrowsAsync<NotFoundException>(() =>
             CreateHandler().Handle(new CreateCardCommand(Guid.NewGuid(), "Card", null), CancellationToken.None));
     }
+
+    [Fact]
+    public async Task Handle_NonMember_Throws404()
+    {
+        var ownerId = Guid.NewGuid();
+        var workspace = Workspace.Create("Acme", WorkspaceSlug.FromName("acme"), ownerId);
+        var board = Board.Create(Guid.NewGuid(), workspace.Id, "Board");
+        var list = BoardList.Create(board.Id, "To Do", FractionalIndex.Start());
+
+        _currentUser.Setup(c => c.UserId).Returns(Guid.NewGuid());
+        _listRepo.Setup(r => r.GetByIdAsync(list.Id, It.IsAny<CancellationToken>())).ReturnsAsync(list);
+        _boardRepo.Setup(r => r.GetByIdAsync(board.Id, It.IsAny<CancellationToken>())).ReturnsAsync(board);
+        _workspaceRepo.Setup(r => r.GetByIdWithMembersAsync(workspace.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(workspace);
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            CreateHandler().Handle(new CreateCardCommand(list.Id, "Card", null), CancellationToken.None));
+
+        _cardRepo.Verify(r => r.AddAsync(It.IsAny<Card>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_Viewer_Throws403()
+    {
+        var ownerId = Guid.NewGuid();
+        var viewerId = Guid.NewGuid();
+        var workspace = Workspace.Create("Acme", WorkspaceSlug.FromName("acme"), ownerId);
+        workspace.InviteMember(viewerId, WorkspaceMemberRole.Viewer);
+        var board = Board.Create(Guid.NewGuid(), workspace.Id, "Board");
+        var list = BoardList.Create(board.Id, "To Do", FractionalIndex.Start());
+
+        _currentUser.Setup(c => c.UserId).Returns(viewerId);
+        _listRepo.Setup(r => r.GetByIdAsync(list.Id, It.IsAny<CancellationToken>())).ReturnsAsync(list);
+        _boardRepo.Setup(r => r.GetByIdAsync(board.Id, It.IsAny<CancellationToken>())).ReturnsAsync(board);
+        _workspaceRepo.Setup(r => r.GetByIdWithMembersAsync(workspace.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(workspace);
+
+        await Assert.ThrowsAsync<ForbiddenException>(() =>
+            CreateHandler().Handle(new CreateCardCommand(list.Id, "Card", null), CancellationToken.None));
+    }
 }

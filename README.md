@@ -2,9 +2,9 @@
 
 [![CI](https://github.com/Drakonchik1/FlowBoard/actions/workflows/ci.yml/badge.svg)](https://github.com/Drakonchik1/FlowBoard/actions/workflows/ci.yml)
 
-ASP.NET Core 10 API portfolio project: **Clean Architecture**, **JWT auth with family-based refresh rotation**, **workspace RBAC**, **boards + cards with Dapper reads**, **SignalR real-time**, **optional Redis SignalR backplane**, **147 tests**, and **Docker** local dev stack.
+ASP.NET Core 10 API portfolio project: **Clean Architecture**, **JWT auth with family-based refresh rotation**, **workspace RBAC**, **boards + cards with Dapper reads**, **SignalR real-time**, **optional Redis SignalR backplane**, **206 tests**, and **Docker** local dev stack.
 
-**Current scope (Sprints 1–5):** authentication, multi-tenant workspaces with RBAC, Kanban boards with fractional-index ordering, SignalR card-move broadcasts, and optional Redis scale-out for SignalR.
+**Delivered (Sprints 1–5):** authentication, multi-tenant workspaces with RBAC, Kanban boards with fractional-index ordering, SignalR card-move broadcasts, and optional Redis scale-out for SignalR. Next: Sprint 6 (Comments + Tags + Email).
 
 ## Tech Stack
 
@@ -22,7 +22,7 @@ ASP.NET Core 10 API portfolio project: **Clean Architecture**, **JWT auth with f
 | Real-time | SignalR (`BoardHub`) — `CardMoved` events; optional Redis backplane for multi-instance scale-out |
 | Cache / scale-out | Redis 7 (optional) — SignalR backplane only when connection string configured |
 | API docs | Scalar (OpenAPI) with JWT Bearer scheme |
-| Tests | xUnit + Moq (147 unit) + TestContainers SQL Server (4 integration) |
+| Tests | xUnit + Moq (198 unit) + TestContainers SQL Server (8 integration) |
 
 ## Project Structure
 
@@ -83,7 +83,7 @@ docker compose up
 ```
 
 - API URL: `http://localhost:5000`
-- **Redis** on port 6379 (optional — enables SignalR backplane when `REDIS_CONNECTION` is set)
+- **Redis** on port 6379 — compose sets `ConnectionStrings__Redis=redis:6379` on the API (SignalR backplane enabled)
 - **Development mode** in compose (OpenAPI, auto-migrate, permissive CORS) — not for production
 
 ## Auth API
@@ -150,7 +150,7 @@ Hub: `/hubs/board` — authenticate with JWT via query string: `?access_token=<a
 |---|---|
 | `CardMoved` | Fired after successful card move — payload mirrors move result |
 
-**Scale-out:** set `ConnectionStrings:Redis`, `Redis:ConnectionString`, or `REDIS_CONNECTION` to enable the SignalR Redis backplane. Without Redis, SignalR works on a single API instance.
+**Scale-out:** set `ConnectionStrings:Redis`, `Redis:ConnectionString`, or `REDIS_CONNECTION` to enable the SignalR Redis backplane. Docker Compose sets `ConnectionStrings__Redis=redis:6379` automatically. Without Redis, SignalR works on a single API instance.
 
 ## Security Properties
 
@@ -168,9 +168,9 @@ Hub: `/hubs/board` — authenticate with JWT via query string: `?access_token=<a
 dotnet test
 ```
 
-**147 unit tests** — mocked repositories, sub-second feedback.
+**198 unit tests** — mocked repositories, sub-second feedback.
 
-**4 integration tests** — full board workflow via TestContainers + SQL Server. Require Docker; skipped automatically when Docker is unavailable.
+**8 integration tests** — board workflow, auth refresh concurrency, and CardMoved notifier path via TestContainers + SQL Server. Require Docker; skipped automatically when Docker is unavailable.
 
 ```pwsh
 # Integration tests only (checks Docker, uses TestContainers by default)
@@ -187,9 +187,9 @@ pwsh scripts/run-integration-tests.ps1 -UseCompose
 | 1 | Done | Auth |
 | 2 | Done | Workspaces + RBAC |
 | 3 | Done | Boards + Cards + Dapper + TestContainers |
-| 4 | Done | SignalR real-time (`BoardHub`, `CardMoved`) |
+| 4 | Done | SignalR real-time (`BoardHub`, `CardMoved`, group eviction) |
 | 5 | Done | Redis SignalR backplane (optional) + health check |
-| Closeout | In progress | Finish Sprints 1–5 gaps (`close-01`…`close-11` in queue) |
+| Closeout | Done | Sprints 1–5 hardened (`close-01`…`close-docs`); council verify pending |
 | 6 | Planned | Comments + Tags + Email |
 | 7 | Planned | Hangfire + activity log |
 | 8 | Planned | Production deploy + CI hardening |

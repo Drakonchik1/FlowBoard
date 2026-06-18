@@ -13,7 +13,8 @@ namespace FlowBoard.Application.Features.Workspaces.Commands.RemoveMember;
 public sealed class RemoveMemberCommandHandler(
     IWorkspaceRepository workspaceRepository,
     IUnitOfWork unitOfWork,
-    ICurrentUserService currentUser) : IRequestHandler<RemoveMemberCommand, Unit>
+    ICurrentUserService currentUser,
+    IBoardRealtimeGroupEvictor boardGroupEvictor) : IRequestHandler<RemoveMemberCommand, Unit>
 {
     public async Task<Unit> Handle(RemoveMemberCommand request, CancellationToken cancellationToken)
     {
@@ -28,6 +29,7 @@ public sealed class RemoveMemberCommandHandler(
         workspace.RemoveMember(request.UserId);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await boardGroupEvictor.EvictUserFromBoardGroupsAsync(request.UserId, cancellationToken);
         return Unit.Value;
     }
 }

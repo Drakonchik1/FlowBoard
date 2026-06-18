@@ -8,14 +8,12 @@ internal static class SignalRRedisExtensions
     /// </summary>
     public static IServiceCollection AddSignalRWithOptionalRedisBackplane(
         this IServiceCollection services,
-        IConfiguration configuration)
+        string? redisConnectionString)
     {
-        var redisConnection = configuration.GetRedisConnectionString();
-
         var signalRBuilder = services.AddSignalR();
 
-        if (!string.IsNullOrWhiteSpace(redisConnection))
-            signalRBuilder.AddStackExchangeRedis(redisConnection);
+        if (!string.IsNullOrEmpty(redisConnectionString))
+            signalRBuilder.AddStackExchangeRedis(redisConnectionString);
 
         return services;
     }

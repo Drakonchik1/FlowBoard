@@ -17,7 +17,26 @@ public sealed class MoveCardCommandHandler(
     IUnitOfWork unitOfWork,
     ICurrentUserService currentUser) : IRequestHandler<MoveCardCommand, CardDto>
 {
+    private const int MaxAttempts = 3;
+
     public async Task<CardDto> Handle(MoveCardCommand request, CancellationToken cancellationToken)
+    {
+        for (var attempt = 1; attempt <= MaxAttempts; attempt++)
+        {
+            try
+            {
+                return await TryMoveAsync(request, cancellationToken);
+            }
+            catch (ConflictException) when (attempt < MaxAttempts)
+            {
+                // Concurrent move or duplicate position — reload neighbours and retry.
+            }
+        }
+
+        throw new ConflictException("Could not move the card due to concurrent updates. Please retry.");
+    }
+
+    private async Task<CardDto> TryMoveAsync(MoveCardCommand request, CancellationToken cancellationToken)
     {
         var userId = currentUser.UserId ?? throw new UnauthorizedException("You must be authenticated.");
 
@@ -35,7 +54,7 @@ public sealed class MoveCardCommandHandler(
             ?? throw new NotFoundException("List", request.TargetListId);
 
         if (targetList.BoardId != card.BoardId)
-            throw new DomainException("A card cannot be moved to a list on a different board.");
+            throw new NotFoundException("List", request.TargetListId);
 
         var before = await ResolveNeighbourAsync(request.BeforeCardId, request.CardId, request.TargetListId, cancellationToken);
         var after = await ResolveNeighbourAsync(request.AfterCardId, request.CardId, request.TargetListId, cancellationToken);
@@ -65,10 +84,10 @@ public sealed class MoveCardCommandHandler(
             throw new DomainException("A card cannot be positioned relative to itself.");
 
         var neighbour = await cardRepository.GetByIdAsync(neighbourId.Value, cancellationToken)
-            ?? throw new DomainException("Neighbour card does not exist.");
+            ?? throw new NotFoundException("Card", neighbourId.Value);
 
         if (neighbour.BoardListId != targetListId)
-            throw new DomainException("Neighbour card is not in the target list.");
+            throw new NotFoundException("Card", neighbourId.Value);
 
         return neighbour;
     }

@@ -1,6 +1,7 @@
 using FlowBoard.Application.Common.Exceptions;
 using FlowBoard.Application.Common.Interfaces;
 using FlowBoard.Application.Common.Security;
+using FlowBoard.Application.Features.Auth.Commands;
 using FlowBoard.Application.Features.Auth.Commands.RefreshToken;
 using FlowBoard.Domain.Entities;
 using FlowBoard.Domain.Interfaces;
@@ -22,6 +23,16 @@ public sealed class RefreshTokenCommandHandlerTests
 
     private RefreshTokenCommandHandler CreateHandler() =>
         new(_refreshTokenRepo.Object, _userRepo.Object, _unitOfWork.Object, _jwtService.Object);
+
+    public RefreshTokenCommandHandlerTests()
+    {
+        _unitOfWork
+            .Setup(u => u.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task<AuthResponse>>>(),
+                It.IsAny<CancellationToken>()))
+            .Returns<Func<CancellationToken, Task<AuthResponse>>, CancellationToken>(
+                (operation, ct) => operation(ct));
+    }
 
     private static User CreateTestUser() =>
         User.Create("user@example.com", "Test User", "hash");
@@ -79,6 +90,8 @@ public sealed class RefreshTokenCommandHandlerTests
 
         _refreshTokenRepo.Setup(r => r.GetByHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
+        _refreshTokenRepo.Setup(r => r.GetByHashWithUpdateLockAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existing);
         _userRepo.Setup(r => r.GetByIdAsync(user.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
         _jwtService.Setup(j => j.GenerateRefreshToken())
@@ -97,6 +110,9 @@ public sealed class RefreshTokenCommandHandlerTests
             It.IsAny<CancellationToken>()), Times.Once);
 
         _refreshTokenRepo.Verify(r => r.RevokeEntireFamilyAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWork.Verify(u => u.ExecuteInTransactionAsync(
+            It.IsAny<Func<CancellationToken, Task<AuthResponse>>>(),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -105,6 +121,8 @@ public sealed class RefreshTokenCommandHandlerTests
         var existing = RefreshToken.CreateNew(Guid.NewGuid(), TokenHasher.Hash("any"), DateTime.UtcNow.AddDays(7));
 
         _refreshTokenRepo.Setup(r => r.GetByHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existing);
+        _refreshTokenRepo.Setup(r => r.GetByHashWithUpdateLockAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
         _userRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((User?)null);

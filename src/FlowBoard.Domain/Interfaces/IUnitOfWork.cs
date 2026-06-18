@@ -11,4 +11,12 @@ public interface IUnitOfWork
     /// Returns the number of state entries written to the database.
     /// </summary>
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Runs <paramref name="operation"/> inside a database transaction on the same context as
+    /// <see cref="SaveChangesAsync"/>. Commits on success; rolls back on any exception.
+    /// </summary>
+    Task<T> ExecuteInTransactionAsync<T>(
+        Func<CancellationToken, Task<T>> operation,
+        CancellationToken cancellationToken = default);
 }

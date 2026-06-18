@@ -16,6 +16,8 @@ namespace FlowBoard.Application.Features.Auth.Commands.RefreshToken;
 ///   3. Found but revoked → REUSE DETECTED → revoke entire family → 401.
 ///   4. Found but expired → 401 (no family revocation — natural expiry is not reuse).
 ///   5. Found and active → revoke it → issue replacement in same family → return new pair.
+/// Active rotation runs inside a transaction with a row update lock to prevent concurrent
+/// double-issuance from the same refresh token.
 /// </summary>
 public sealed class RefreshTokenCommandHandler(
     IRefreshTokenRepository refreshTokenRepository,
@@ -42,6 +44,18 @@ public sealed class RefreshTokenCommandHandler(
         }
 
         if (existing.IsExpired)
+            throw new UnauthorizedException(InvalidRefreshTokenMessage);
+
+        return await unitOfWork.ExecuteInTransactionAsync(
+            ct => RotateActiveTokenAsync(tokenHash, ct),
+            cancellationToken);
+    }
+
+    private async Task<AuthResponse> RotateActiveTokenAsync(string tokenHash, CancellationToken cancellationToken)
+    {
+        var existing = await refreshTokenRepository.GetByHashWithUpdateLockAsync(tokenHash, cancellationToken);
+
+        if (existing is null || existing.IsRevoked || existing.IsExpired)
             throw new UnauthorizedException(InvalidRefreshTokenMessage);
 
         var user = await userRepository.GetByIdAsync(existing.UserId, cancellationToken);
