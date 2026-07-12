@@ -32,6 +32,8 @@ internal sealed class CardConfiguration : IEntityTypeConfiguration<Card>
             .HasMaxLength(20)
             .IsRequired();
 
+        builder.Property(c => c.AssigneeId);
+
         builder.Property(c => c.IsDeleted).HasDefaultValue(false).IsRequired();
         builder.Property(c => c.CreatedAt).IsRequired();
         builder.Property(c => c.UpdatedAt).IsConcurrencyToken().IsRequired();

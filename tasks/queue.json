@@ -1,8 +1,8 @@
 {
   "version": 2,
   "projectGoal": "FlowBoard — ASP.NET Core 10 Kanban API with Clean Architecture, JWT, RBAC, SignalR real-time, Redis scale-out, production deploy.",
-  "sprint": 6,
-  "activePhase": "sprint6",
+  "sprint": 8,
+  "activePhase": "sprint8",
   "phases": {
     "closeout": {
       "title": "Closeout — finish & harden Sprints 1–5",
@@ -42,16 +42,16 @@
       "note": "Redis backplane — complete; closeout: compose wiring (close-01), Redis tests (close-08), polish (close-11)"
     },
     "6": {
-      "status": "planned",
-      "note": "Comments + Tags + Email — queue phase sprint6"
+      "status": "done",
+      "note": "Comments + Tags + Email — council verified (s6-council-verify); docs synced (s6-docs)"
     },
     "7": {
-      "status": "planned",
-      "note": "Hangfire + activity log"
+      "status": "done",
+      "note": "Hangfire + activity log — docs synced (s7-docs)"
     },
     "8": {
-      "status": "planned",
-      "note": "Deploy + prod hardening (incl. rate limits, Redis AUTH)"
+      "status": "done",
+      "note": "Deploy + prod hardening; docs synced (s8-docs); council verify (s8-council) before final GitHub push"
     }
   },
   "tasks": [
@@ -412,7 +412,7 @@
       "id": "s6-01",
       "phase": "sprint6",
       "title": "Comments entity + CRUD API",
-      "status": "pending",
+      "status": "done",
       "files": [
         "src/FlowBoard.Domain/Entities/",
         "src/FlowBoard.Application/Features/Comments/",
@@ -429,7 +429,7 @@
       "id": "s6-02",
       "phase": "sprint6",
       "title": "Comments real-time push via SignalR",
-      "status": "pending",
+      "status": "done",
       "files": [
         "src/FlowBoard.API/Hubs/BoardHub.cs",
         "src/FlowBoard.Application/EventHandlers/"
@@ -444,7 +444,7 @@
       "id": "s6-03",
       "phase": "sprint6",
       "title": "Tags + CardTags (workspace tags, apply to cards)",
-      "status": "pending",
+      "status": "done",
       "files": [
         "src/FlowBoard.Domain/",
         "src/FlowBoard.Application/Features/Tags/"
@@ -460,7 +460,7 @@
       "id": "s6-04",
       "phase": "sprint6",
       "title": "IEmailService + MailKit SMTP implementation",
-      "status": "pending",
+      "status": "done",
       "files": [
         "src/FlowBoard.Application/Common/Interfaces/IEmailService.cs",
         "src/FlowBoard.Infrastructure/Services/"
@@ -475,7 +475,7 @@
       "id": "s6-05",
       "phase": "sprint6",
       "title": "Async email via IHostedService + Channel",
-      "status": "pending",
+      "status": "done",
       "files": [
         "src/FlowBoard.Infrastructure/"
       ],
@@ -489,7 +489,7 @@
       "id": "s6-06",
       "phase": "sprint6",
       "title": "CleanupExpiredRefreshTokensService (IHostedService)",
-      "status": "pending",
+      "status": "done",
       "files": [
         "src/FlowBoard.Infrastructure/"
       ],
@@ -503,7 +503,7 @@
       "id": "s6-07",
       "phase": "sprint6",
       "title": "Integration tests — comments + tags",
-      "status": "pending",
+      "status": "done",
       "files": [
         "tests/FlowBoard.IntegrationTests/"
       ],
@@ -516,7 +516,7 @@
       "phase": "sprint6",
       "kind": "council",
       "title": "Live Council — Sprint 6 review (bugs + security + architecture)",
-      "status": "pending",
+      "status": "done",
       "files": [
         "src/",
         "tests/",
@@ -562,7 +562,7 @@
       "id": "s6-council-fixes",
       "phase": "sprint6",
       "title": "Fix Sprint 6 council security and bug findings",
-      "status": "pending",
+      "status": "done",
       "files": [
         "src/",
         "tests/",
@@ -574,14 +574,14 @@
         "auth rotation semantics",
         "migrations without approval"
       ],
-      "notes": "Local only — git push waits for s6-council-verify."
+      "notes": "Fixed High/Medium from sprint-6-report; deferred #8→s8-02, #11 FK, #12→s7-02. Local only — git push waits for s6-council-verify."
     },
     {
       "id": "s6-council-verify",
       "phase": "sprint6",
       "kind": "council",
       "title": "Live Council — Sprint 6 remediation verification",
-      "status": "pending",
+      "status": "done",
       "files": [
         "src/",
         "tests/",
@@ -628,7 +628,7 @@
       "id": "s6-docs",
       "phase": "sprint6",
       "title": "Sync docs — Sprint 6 delivered",
-      "status": "pending",
+      "status": "done",
       "files": [
         "SPRINT.md",
         "README.md",
@@ -644,7 +644,7 @@
       "id": "s7-01",
       "phase": "sprint7",
       "title": "Add Hangfire with SQL Server storage",
-      "status": "pending",
+      "status": "done",
       "files": [
         "src/FlowBoard.Infrastructure/",
         "src/FlowBoard.API/Program.cs"
@@ -659,7 +659,7 @@
       "id": "s7-02",
       "phase": "sprint7",
       "title": "Migrate email + token cleanup jobs to Hangfire",
-      "status": "pending",
+      "status": "done",
       "files": [
         "src/FlowBoard.Infrastructure/"
       ],
@@ -671,7 +671,7 @@
       "id": "s7-03",
       "phase": "sprint7",
       "title": "ActivityLog entity + event-driven writes",
-      "status": "pending",
+      "status": "done",
       "files": [
         "src/FlowBoard.Domain/",
         "src/FlowBoard.Application/"
@@ -686,7 +686,7 @@
       "id": "s7-docs",
       "phase": "sprint7",
       "title": "Sync docs — Sprint 7 delivered",
-      "status": "pending",
+      "status": "done",
       "files": [
         "SPRINT.md",
         "README.md"
@@ -701,7 +701,7 @@
       "id": "s8-01",
       "phase": "sprint8",
       "title": "Production docker-compose + secrets hardening",
-      "status": "pending",
+      "status": "done",
       "files": [
         "docker-compose.yml",
         ".env.example",
@@ -717,7 +717,7 @@
       "id": "s8-02",
       "phase": "sprint8",
       "title": "Rate limiting on authenticated write endpoints",
-      "status": "pending",
+      "status": "done",
       "files": [
         "src/FlowBoard.API/Program.cs"
       ],
@@ -731,7 +731,7 @@
       "id": "s8-03",
       "phase": "sprint8",
       "title": "CI — integration job parity + coverage report",
-      "status": "pending",
+      "status": "done",
       "files": [
         ".github/workflows/",
         "tests/"
@@ -744,7 +744,7 @@
       "id": "s8-04",
       "phase": "sprint8",
       "title": "Deploy to Railway/Azure + live URL in README",
-      "status": "pending",
+      "status": "done",
       "files": [
         "README.md",
         "docker-compose.yml"
@@ -757,7 +757,7 @@
       "id": "s8-docs",
       "phase": "sprint8",
       "title": "Sync docs — Sprint 8 / MVP complete",
-      "status": "pending",
+      "status": "done",
       "files": [
         "SPRINT.md",
         "README.md",
@@ -767,7 +767,127 @@
       "dontTouch": [
         "application code"
       ],
-      "notes": ""
+      "notes": "End of feature Sprint 8 / MVP. Council review follows (s8-council → s8-council-fixes → s8-council-verify)."
+    },
+    {
+      "id": "s8-council",
+      "phase": "sprint8",
+      "kind": "council",
+      "title": "Live Council — Sprint 8 / MVP review (production + security + deploy)",
+      "status": "done",
+      "files": [
+        "src/",
+        "tests/",
+        "docker-compose.yml",
+        ".github/workflows/",
+        "SECURITY.md",
+        "README.md",
+        "SPRINT.md"
+      ],
+      "doneWhen": "docs/council/sprint-8-report.md exists with prioritized findings and file:line refs",
+      "dontTouch": [
+        "application code — report only",
+        "auth behavior changes",
+        "migrations"
+      ],
+      "notes": "Read-only review after s8-docs. Findings fixed in s8-council-fixes; git push after s8-council-verify.",
+      "council": {
+        "outputFile": "docs/council/sprint-8-report.md",
+        "workDir": "docs/council/.work",
+        "members": [
+          {
+            "id": "bug-hunter",
+            "role": "Bug & logic reviewer",
+            "focus": "Production edge cases, CI/deploy gaps, test coverage holes."
+          },
+          {
+            "id": "security-auditor",
+            "role": "Security reviewer",
+            "scope": "project",
+            "focus": "OWASP API Top 10, prod compose/secrets, rate limits, Hangfire dashboard, Redis AUTH, CORS."
+          },
+          {
+            "id": "architecture-guard",
+            "role": "Architecture reviewer",
+            "focus": "MVP completeness, convention drift, deploy vs dev config separation."
+          }
+        ],
+        "synthesizer": {
+          "role": "Council chair",
+          "focus": "Merge, deduplicate, prioritize, list follow-up tasks for s8-council-fixes."
+        }
+      }
+    },
+    {
+      "id": "s8-council-fixes",
+      "phase": "sprint8",
+      "title": "Fix Sprint 8 / MVP council security and bug findings",
+      "status": "done",
+      "files": [
+        "src/",
+        "tests/",
+        "docker-compose.yml",
+        ".github/workflows/",
+        "SPRINT.md",
+        "README.md",
+        "SECURITY.md"
+      ],
+      "doneWhen": "High/Medium findings from docs/council/sprint-8-report.md fixed or deferred with reason; dotnet test green",
+      "dontTouch": [
+        "auth rotation semantics",
+        "migrations without approval"
+      ],
+      "notes": "Fixed High/Medium from sprint-8-report; deferred Critical #1 distributed eviction, High #2/#3/#8, Medium #11/#18/#22. Local only — git push waits for s8-council-verify."
+    },
+    {
+      "id": "s8-council-verify",
+      "phase": "sprint8",
+      "kind": "council",
+      "title": "Live Council — Sprint 8 / MVP remediation verification",
+      "status": "done",
+      "files": [
+        "src/",
+        "tests/",
+        "docker-compose.yml",
+        "docs/council/sprint-8-report.md",
+        "SPRINT.md",
+        "README.md"
+      ],
+      "doneWhen": "docs/council/sprint-8-verify-report.md exists; High/Medium findings verified fixed or deferred; council signs off MVP for publish",
+      "dontTouch": [
+        "application code — report only unless blocker found",
+        "auth behavior changes",
+        "migrations"
+      ],
+      "notes": "Re-verification after s8-council-fixes. Agent-runner pushes full MVP work to GitHub when done.",
+      "council": {
+        "outputFile": "docs/council/sprint-8-verify-report.md",
+        "workDir": "docs/council/.work",
+        "members": [
+          {
+            "id": "bug-hunter",
+            "role": "Bug & logic reviewer",
+            "scope": "sprint",
+            "focus": "Verify s8-council-fixes addressed sprint-8-report items."
+          },
+          {
+            "id": "security-auditor",
+            "role": "Security reviewer",
+            "scope": "project",
+            "focus": "Re-check prod hardening, rate limits, secrets, deploy surface after remediation."
+          },
+          {
+            "id": "architecture-guard",
+            "role": "Architecture reviewer",
+            "scope": "sprint",
+            "focus": "Confirm MVP fixes match conventions; no scope creep."
+          }
+        ],
+        "synthesizer": {
+          "role": "Council chair",
+          "focus": "Sign off MVP for GitHub publish or list remaining blockers."
+        }
+      }
     }
   ]
 }

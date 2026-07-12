@@ -55,6 +55,7 @@ public sealed class SignalRRedisExtensionsTests
         services.AddLogging();
         services.AddSingleton(Mock.Of<ISender>());
         services.AddSingleton<BoardGroupMembershipRegistry>();
+        services.AddSingleton<BoardHubJoinRateLimiter>();
         services.AddSignalRWithOptionalRedisBackplane(redisConnectionString);
         return services;
     }

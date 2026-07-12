@@ -1,0 +1,12 @@
+# Railway — deploy the API container (Dockerfile). Provision SQL Server + Redis separately
+# (e.g. Azure SQL + Railway Redis plugin) and set ConnectionStrings__* / Jwt__* env vars in the dashboard.
+# See README.md → Production deployment → Railway.
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "src/FlowBoard.API/Dockerfile"
+
+[deploy]
+healthcheckPath = "/health/ready"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"

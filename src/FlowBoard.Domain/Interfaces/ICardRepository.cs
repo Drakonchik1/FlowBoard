@@ -10,4 +10,8 @@ public interface ICardRepository : IRepository<Card>
 
     /// <summary>Returns the position of the last (highest) card in a list, or null when the list is empty.</summary>
     Task<FractionalIndex?> GetLastPositionAsync(Guid boardListId, CancellationToken cancellationToken = default);
+
+    /// <summary>Clears <see cref="Card.AssigneeId"/> on all cards in a workspace assigned to the given user.</summary>
+    Task ClearAssigneeForUserInWorkspaceAsync(
+        Guid workspaceId, Guid userId, CancellationToken cancellationToken = default);
 }

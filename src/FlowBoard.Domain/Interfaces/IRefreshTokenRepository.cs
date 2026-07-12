@@ -26,4 +26,9 @@ public interface IRefreshTokenRepository : IRepository<RefreshToken>
     /// Called on token reuse detection to invalidate a potentially compromised session.
     /// </summary>
     Task RevokeEntireFamilyAsync(Guid familyId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Marks all expired, non-revoked tokens as revoked. Returns the number of tokens updated.
+    /// </summary>
+    Task<int> RevokeExpiredAsync(CancellationToken cancellationToken = default);
 }

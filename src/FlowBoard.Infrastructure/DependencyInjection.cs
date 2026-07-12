@@ -1,4 +1,5 @@
 using System.Text;
+using FlowBoard.Application.Common.Configuration;
 using FlowBoard.Application.Common.Interfaces;
 using FlowBoard.Domain.Interfaces;
 using FlowBoard.Infrastructure.Persistence;
@@ -30,15 +31,24 @@ public static class DependencyInjection
         services.AddScoped<IBoardRepository, BoardRepository>();
         services.AddScoped<IBoardListRepository, BoardListRepository>();
         services.AddScoped<ICardRepository, CardRepository>();
+        services.AddScoped<ICommentRepository, CommentRepository>();
+        services.AddScoped<ITagRepository, TagRepository>();
+        services.AddScoped<ICardTagRepository, CardTagRepository>();
+        services.AddScoped<IActivityLogRepository, ActivityLogRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         // Dapper read side. DefaultTypeMap.MatchNamesWithUnderscores stays off — our columns are PascalCase.
         services.AddSingleton<ISqlConnectionFactory, SqlConnectionFactory>();
         services.AddScoped<IBoardReadService, BoardReadService>();
+        services.AddScoped<IActivityLogReadService, ActivityLogReadService>();
 
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
+        services.Configure<AuthSettings>(configuration.GetSection(AuthSettings.SectionName));
+        services.Configure<SmtpSettings>(configuration.GetSection(SmtpSettings.SectionName));
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IPasswordService, PasswordService>();
+        services.AddSingleton<SmtpEmailService>();
+        services.AddSingleton<IEmailService, QueuedEmailService>();
 
         var jwtSettings = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
             ?? throw new InvalidOperationException("JWT settings are missing from configuration.");

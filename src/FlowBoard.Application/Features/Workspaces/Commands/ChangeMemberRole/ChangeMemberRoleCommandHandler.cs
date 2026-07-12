@@ -4,6 +4,7 @@ using FlowBoard.Domain.Entities;
 using FlowBoard.Domain.Exceptions;
 using FlowBoard.Domain.Interfaces;
 using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace FlowBoard.Application.Features.Workspaces.Commands.ChangeMemberRole;
 
@@ -12,7 +13,8 @@ public sealed class ChangeMemberRoleCommandHandler(
     IWorkspaceRepository workspaceRepository,
     IUnitOfWork unitOfWork,
     ICurrentUserService currentUser,
-    IBoardRealtimeGroupEvictor boardGroupEvictor) : IRequestHandler<ChangeMemberRoleCommand, WorkspaceMemberDto>
+    IBoardRealtimeGroupEvictor boardGroupEvictor,
+    ILogger<ChangeMemberRoleCommandHandler> logger) : IRequestHandler<ChangeMemberRoleCommand, WorkspaceMemberDto>
 {
     public async Task<WorkspaceMemberDto> Handle(ChangeMemberRoleCommand request, CancellationToken cancellationToken)
     {
@@ -30,7 +32,19 @@ public sealed class ChangeMemberRoleCommandHandler(
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         if (newRole == WorkspaceMemberRole.Viewer && previousRole != WorkspaceMemberRole.Viewer)
-            await boardGroupEvictor.EvictUserFromBoardGroupsAsync(request.UserId, cancellationToken);
+        {
+            try
+            {
+                await boardGroupEvictor.EvictUserFromBoardGroupsAsync(request.UserId, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex,
+                    "SignalR group eviction failed after downgrading user {UserId} to Viewer in workspace {WorkspaceId}",
+                    request.UserId,
+                    request.WorkspaceId);
+            }
+        }
 
         var member = workspace.Members.First(m => m.UserId == request.UserId);
         return new WorkspaceMemberDto(member.UserId, member.Role.ToString(), member.JoinedAt);

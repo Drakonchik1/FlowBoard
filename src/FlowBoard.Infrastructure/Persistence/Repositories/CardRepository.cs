@@ -32,4 +32,20 @@ internal sealed class CardRepository(FlowBoardDbContext context)
             .LastOrDefault()
             ?.Position;
     }
+
+    public async Task ClearAssigneeForUserInWorkspaceAsync(
+        Guid workspaceId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var boardIds = await Context.Boards
+            .Where(b => b.WorkspaceId == workspaceId)
+            .Select(b => b.Id)
+            .ToListAsync(cancellationToken);
+
+        var cards = await DbSet
+            .Where(c => boardIds.Contains(c.BoardId) && c.AssigneeId == userId)
+            .ToListAsync(cancellationToken);
+
+        foreach (var card in cards)
+            card.Assign(null, userId);
+    }
 }

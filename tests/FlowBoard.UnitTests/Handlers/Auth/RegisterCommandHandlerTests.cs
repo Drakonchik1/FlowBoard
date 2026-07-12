@@ -1,8 +1,11 @@
+using FlowBoard.Application.Common.Configuration;
 using FlowBoard.Application.Common.Exceptions;
 using FlowBoard.Application.Common.Interfaces;
 using FlowBoard.Application.Features.Auth.Commands.Register;
 using FlowBoard.Domain.Entities;
+using FlowBoard.Domain.Exceptions;
 using FlowBoard.Domain.Interfaces;
+using Microsoft.Extensions.Options;
 using Moq;
 
 namespace FlowBoard.UnitTests.Handlers.Auth;
@@ -18,9 +21,10 @@ public sealed class RegisterCommandHandlerTests
     private static RefreshTokenResult AnyRefresh() =>
         new("plain_token", "hashed_token", DateTime.UtcNow.AddDays(7));
 
-    private RegisterCommandHandler CreateHandler() =>
+    private RegisterCommandHandler CreateHandler(bool allowRegistration = true) =>
         new(_userRepo.Object, _refreshTokenRepo.Object, _unitOfWork.Object,
-            _passwordService.Object, _jwtService.Object);
+            _passwordService.Object, _jwtService.Object,
+            Options.Create(new AuthSettings { AllowRegistration = allowRegistration }));
 
     [Fact]
     public async Task Handle_ValidCommand_ReturnsAuthResponse()
@@ -78,5 +82,16 @@ public sealed class RegisterCommandHandlerTests
         _userRepo.Verify(r => r.AddAsync(
             It.Is<User>(u => u.PasswordHash == hashedPassword),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_RegistrationDisabled_ThrowsForbiddenException()
+    {
+        var command = new RegisterCommand("test@example.com", "Test User", "Password123!", "Password123!");
+
+        await Assert.ThrowsAsync<ForbiddenException>(() =>
+            CreateHandler(allowRegistration: false).Handle(command, CancellationToken.None));
+
+        _userRepo.Verify(r => r.ExistsByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

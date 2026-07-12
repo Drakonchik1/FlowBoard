@@ -69,7 +69,7 @@ public sealed class BoardHubTests
         string connectionId,
         IGroupManager groups)
     {
-        var hub = new BoardHub(sender, registry);
+        var hub = new BoardHub(sender, registry, new BoardHubJoinRateLimiter());
 
         var context = new Mock<HubCallerContext>();
         context.Setup(c => c.User).Returns(new ClaimsPrincipal(new ClaimsIdentity(

@@ -17,15 +17,20 @@ namespace FlowBoard.API.Hubs;
 [Authorize]
 public sealed class BoardHub(
     ISender sender,
-    BoardGroupMembershipRegistry membershipRegistry) : Hub<IBoardHubClient>
+    BoardGroupMembershipRegistry membershipRegistry,
+    BoardHubJoinRateLimiter joinRateLimiter) : Hub<IBoardHubClient>
 {
     /// <summary>Subscribe to updates for a board the caller can access.</summary>
     public async Task JoinBoard(Guid boardId)
     {
+        var userId = GetUserId();
+        if (!joinRateLimiter.TryAcquire(userId))
+            throw new HubException("Too many board join requests. Try again later.");
+
         await EnsureCanAccessBoardAsync(boardId);
         var groupName = BoardGroupNames.ForBoard(boardId);
         await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
-        membershipRegistry.TrackJoin(Context.ConnectionId, GetUserId(), boardId);
+        membershipRegistry.TrackJoin(Context.ConnectionId, userId, boardId);
     }
 
     /// <summary>

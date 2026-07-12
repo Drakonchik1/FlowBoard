@@ -1,3 +1,4 @@
+using System.Net;
 using FlowBoard.Application.Common.Interfaces;
 using FlowBoard.Application.Common.Realtime;
 using FlowBoard.Domain.Events;
@@ -18,4 +19,15 @@ internal sealed class BoardRealtimeNotifier(IHubContext<BoardHub, IBoardHubClien
                 evt.FromListId,
                 evt.ToListId,
                 evt.Position));
+
+    public Task NotifyCommentAddedAsync(CommentAddedEvent evt, CancellationToken cancellationToken = default) =>
+        hubContext.Clients
+            .Group(BoardGroupNames.ForBoard(evt.BoardId))
+            .CommentAdded(new CommentAddedMessage(
+                evt.CommentId,
+                evt.CardId,
+                evt.BoardId,
+                evt.AuthorId,
+                WebUtility.HtmlEncode(evt.Body),
+                evt.CreatedAt));
 }

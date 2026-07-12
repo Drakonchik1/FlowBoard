@@ -27,5 +27,6 @@ public sealed record CardViewDto(
     string? Description,
     string Position,
     string Priority,
+    Guid? AssigneeId,
     DateTime CreatedAt,
     DateTime UpdatedAt);

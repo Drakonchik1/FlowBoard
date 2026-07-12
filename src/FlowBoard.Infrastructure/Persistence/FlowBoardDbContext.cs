@@ -13,6 +13,10 @@ public sealed class FlowBoardDbContext(DbContextOptions<FlowBoardDbContext> opti
     public DbSet<Board> Boards => Set<Board>();
     public DbSet<BoardList> BoardLists => Set<BoardList>();
     public DbSet<Card> Cards => Set<Card>();
+    public DbSet<Comment> Comments => Set<Comment>();
+    public DbSet<Tag> Tags => Set<Tag>();
+    public DbSet<CardTag> CardTags => Set<CardTag>();
+    public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

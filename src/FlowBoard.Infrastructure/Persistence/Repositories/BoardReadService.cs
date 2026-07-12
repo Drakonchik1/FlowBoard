@@ -19,7 +19,7 @@ internal sealed class BoardReadService(ISqlConnectionFactory connectionFactory) 
         FROM [board_lists]
         WHERE [BoardId] = @BoardId AND [IsDeleted] = 0;
 
-        SELECT [Id], [BoardListId], [BoardId], [Title], [Description], [Position], [Priority], [CreatedAt], [UpdatedAt]
+        SELECT [Id], [BoardListId], [BoardId], [Title], [Description], [Position], [Priority], [AssigneeId], [CreatedAt], [UpdatedAt]
         FROM [cards]
         WHERE [BoardId] = @BoardId AND [IsDeleted] = 0;
         """;
@@ -47,7 +47,7 @@ internal sealed class BoardReadService(ISqlConnectionFactory connectionFactory) 
                 g => (IReadOnlyList<CardViewDto>)g
                     .OrderBy(c => c.Position, StringComparer.Ordinal)
                     .Select(c => new CardViewDto(
-                        c.Id, c.BoardListId, c.Title, c.Description, c.Position, c.Priority, c.CreatedAt, c.UpdatedAt))
+                        c.Id, c.BoardListId, c.Title, c.Description, c.Position, c.Priority, c.AssigneeId, c.CreatedAt, c.UpdatedAt))
                     .ToList());
 
         var lists = listRows
@@ -74,6 +74,7 @@ internal sealed class BoardReadService(ISqlConnectionFactory connectionFactory) 
         string? Description,
         string Position,
         string Priority,
+        Guid? AssigneeId,
         DateTime CreatedAt,
         DateTime UpdatedAt);
 }

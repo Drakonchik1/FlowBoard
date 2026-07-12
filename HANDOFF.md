@@ -11,10 +11,10 @@ FlowBoard — ASP.NET Core 10 Kanban API (Clean Architecture, JWT, RBAC, SignalR
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-18 |
-| **Task ID** | close-council |
-| **Result** | Closeout published — `ebffeb4` on `origin/master`; council report at `docs/council/closeout-report.md` |
-| **Tests** | `dotnet test` green (198 unit + 8 integration) before push |
+| **Date** | 2026-07-12 |
+| **Task ID** | publish-mvp |
+| **Result** | Sprints 6–8 + council verify published to GitHub; Notion synced |
+| **Tests** | 277 unit + 21 integration — `dotnet test` green |
 
 ## Decisions made (carry forward)
 
@@ -23,11 +23,11 @@ FlowBoard — ASP.NET Core 10 Kanban API (Clean Architecture, JWT, RBAC, SignalR
 
 ## What was done
 
-**close-council + publish:** Sprints 1–5 closeout committed and pushed after council sign-off (`ebffeb4`).
+**2026-07-12 session:** Delivered Sprints 6–8 (comments, tags, email, Hangfire, activity log, production deploy), council fixes + verify, docs sync, Notion update, GitHub publish.
 
 ## Next task
 
-Queue: `tasks/queue.json` — next pending: **s6-01**
+Queue complete for current sprint — add tasks to `tasks/queue.json`.
 
 ## Blockers / open questions
 
@@ -35,6 +35,5 @@ _(agent: update if any)_
 
 ## Files touched last run
 
-- `docs/council/closeout-report.md`
-- `SPRINT.md`
-- `HANDOFF.md`
+- `HANDOFF.md`, `SPRINT.md`, `PROJECT_CONTEXT.md`, `README.md`
+- Notion: FlowBoard hub, Sprint 6/7/8 pages, Sprint History — Sprints 6–8 (2026-07-12)

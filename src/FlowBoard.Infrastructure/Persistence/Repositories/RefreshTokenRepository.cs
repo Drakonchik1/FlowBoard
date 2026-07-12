@@ -41,4 +41,18 @@ internal sealed class RefreshTokenRepository(FlowBoardDbContext context)
         foreach (var token in familyTokens)
             token.Revoke();
     }
+
+    public async Task<int> RevokeExpiredAsync(CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow;
+        var expiredTokens = await DbSet
+            .IgnoreQueryFilters()
+            .Where(rt => !rt.IsRevoked && rt.ExpiresAt <= now)
+            .ToListAsync(cancellationToken);
+
+        foreach (var token in expiredTokens)
+            token.Revoke();
+
+        return expiredTokens.Count;
+    }
 }

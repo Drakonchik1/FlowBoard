@@ -9,7 +9,6 @@ export function runDotnetTest(projectRoot: string): Promise<TestResult> {
   return new Promise((resolve) => {
     const child = spawn("dotnet", ["test", "--no-build"], {
       cwd: projectRoot,
-      shell: true,
       stdio: ["ignore", "pipe", "pipe"],
     });
 

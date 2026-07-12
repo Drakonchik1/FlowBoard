@@ -10,16 +10,26 @@ export async function saveQueue(queuePath: string, queue: TaskQueue): Promise<vo
   await writeFile(queuePath, `${JSON.stringify(queue, null, 2)}\n`, "utf-8");
 }
 
+/** Council verify tasks (e.g. s6-council-verify) run only after matching *-council-fixes is done. */
+export function taskDependenciesMet(queue: TaskQueue, task: Task): boolean {
+  const verifyMatch = task.id.match(/^(.+)-council-verify$/);
+  if (!verifyMatch) return true;
+
+  const fixesId = `${verifyMatch[1]}-council-fixes`;
+  const fixes = findTask(queue, fixesId);
+  return !fixes || fixes.status === "done";
+}
+
 export function findNextTask(queue: TaskQueue, options?: { retryFailed?: boolean }): Task | undefined {
-  const pending = queue.tasks.find((t) => t.status === "pending");
+  // Resume interrupted run before picking new pending work.
+  const inProgress = queue.tasks.find((t) => t.status === "in_progress");
+  if (inProgress) return inProgress;
+
+  const pending = queue.tasks.find((t) => t.status === "pending" && taskDependenciesMet(queue, t));
   if (pending) return pending;
 
-  // Stuck from a crashed/interrupted SDK run — resume same task.
-  const stale = queue.tasks.find((t) => t.status === "in_progress");
-  if (stale) return stale;
-
   if (options?.retryFailed) {
-    return queue.tasks.find((t) => t.status === "failed");
+    return queue.tasks.find((t) => t.status === "failed" && taskDependenciesMet(queue, t));
   }
 
   return undefined;

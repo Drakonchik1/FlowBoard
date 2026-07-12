@@ -15,7 +15,7 @@ internal class Repository<T>(FlowBoardDbContext context) : IRepository<T>
     protected readonly DbSet<T> DbSet = context.Set<T>();
 
     public async Task<T?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
-        await DbSet.FindAsync([id], cancellationToken);
+        await DbSet.FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
 
     public async Task AddAsync(T entity, CancellationToken cancellationToken = default) =>
         await DbSet.AddAsync(entity, cancellationToken);

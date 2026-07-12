@@ -24,9 +24,9 @@ function runNext(dryRun: boolean, skipGit: boolean, forceGit: boolean): Promise<
   if (forceGit) args.push("--force-git");
 
   return new Promise((resolve) => {
-    const child = spawn("npx", args, {
+    const npx = process.platform === "win32" ? "npx.cmd" : "npx";
+    const child = spawn(npx, args, {
       stdio: "inherit",
-      shell: true,
       cwd: join(scriptDir, ".."),
     });
     child.on("close", (code) => resolve(code ?? 1));

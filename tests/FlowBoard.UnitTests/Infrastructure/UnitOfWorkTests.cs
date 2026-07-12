@@ -31,7 +31,7 @@ public sealed class UnitOfWorkTests
         _publisher.Verify(
             p => p.Publish(
                 It.Is<DomainEventNotification>(n => n.DomainEvent is UserRegisteredEvent),
-                It.IsAny<CancellationToken>()),
+                CancellationToken.None),
             Times.Once);
     }
 

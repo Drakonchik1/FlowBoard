@@ -2,6 +2,7 @@ using DotNet.Testcontainers.Builders;
 using FlowBoard.Application;
 using FlowBoard.Application.Common.Interfaces;
 using FlowBoard.Infrastructure;
+using FlowBoard.Infrastructure.Hangfire;
 using FlowBoard.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +27,8 @@ public sealed class SqlServerFixture : IAsyncLifetime
 
     public bool IsDockerAvailable { get; private set; }
 
+    public string ConnectionString { get; private set; } = "";
+
     public IServiceProvider Services { get; private set; } = null!;
 
     public TestCurrentUserService CurrentUser { get; } = new();
@@ -46,6 +49,8 @@ public sealed class SqlServerFixture : IAsyncLifetime
                 connectionString = _container.GetConnectionString();
             }
 
+            ConnectionString = connectionString;
+
             var configuration = new ConfigurationBuilder()
                 .AddInMemoryCollection(new Dictionary<string, string?>
                 {
@@ -61,6 +66,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
             services.AddSingleton<IConfiguration>(configuration);
             services.AddApplication();
             services.AddInfrastructure(configuration);
+            services.AddHangfireWithSqlServer(configuration, addServer: false);
             services.AddSingleton<ICurrentUserService>(CurrentUser);
             services.AddSingleton<IBoardRealtimeNotifier>(RealtimeNotifier);
             services.AddSingleton<IBoardRealtimeGroupEvictor, NoOpBoardRealtimeGroupEvictor>();

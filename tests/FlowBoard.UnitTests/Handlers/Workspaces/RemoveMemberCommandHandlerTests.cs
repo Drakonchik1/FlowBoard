@@ -4,6 +4,8 @@ using FlowBoard.Domain.Entities;
 using FlowBoard.Domain.Exceptions;
 using FlowBoard.Domain.Interfaces;
 using FlowBoard.Domain.ValueObjects;
+using MediatR;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 namespace FlowBoard.UnitTests.Handlers.Workspaces;
@@ -11,12 +13,14 @@ namespace FlowBoard.UnitTests.Handlers.Workspaces;
 public sealed class RemoveMemberCommandHandlerTests
 {
     private readonly Mock<IWorkspaceRepository> _workspaceRepo = new();
+    private readonly Mock<ICardRepository> _cardRepo = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<IBoardRealtimeGroupEvictor> _groupEvictor = new();
 
     private RemoveMemberCommandHandler CreateHandler() =>
-        new(_workspaceRepo.Object, _unitOfWork.Object, _currentUser.Object, _groupEvictor.Object);
+        new(_workspaceRepo.Object, _cardRepo.Object, _unitOfWork.Object, _currentUser.Object,
+            _groupEvictor.Object, NullLogger<RemoveMemberCommandHandler>.Instance);
 
     [Fact]
     public async Task Handle_MemberLeaves_RemovesSelf()
@@ -33,6 +37,9 @@ public sealed class RemoveMemberCommandHandlerTests
         await CreateHandler().Handle(new RemoveMemberCommand(workspace.Id, memberId), CancellationToken.None);
 
         Assert.DoesNotContain(workspace.Members, m => m.UserId == memberId);
+        _cardRepo.Verify(
+            r => r.ClearAssigneeForUserInWorkspaceAsync(workspace.Id, memberId, It.IsAny<CancellationToken>()),
+            Times.Once);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         _groupEvictor.Verify(
             e => e.EvictUserFromBoardGroupsAsync(memberId, It.IsAny<CancellationToken>()),
@@ -54,6 +61,9 @@ public sealed class RemoveMemberCommandHandlerTests
         await CreateHandler().Handle(new RemoveMemberCommand(workspace.Id, memberId), CancellationToken.None);
 
         Assert.DoesNotContain(workspace.Members, m => m.UserId == memberId);
+        _cardRepo.Verify(
+            r => r.ClearAssigneeForUserInWorkspaceAsync(workspace.Id, memberId, It.IsAny<CancellationToken>()),
+            Times.Once);
         _groupEvictor.Verify(
             e => e.EvictUserFromBoardGroupsAsync(memberId, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -75,5 +85,26 @@ public sealed class RemoveMemberCommandHandlerTests
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             CreateHandler().Handle(new RemoveMemberCommand(workspace.Id, otherMemberId), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Handle_EvictionFailsAfterCommit_ReturnsSuccess()
+    {
+        var ownerId = Guid.NewGuid();
+        var memberId = Guid.NewGuid();
+        var workspace = Workspace.Create("Acme", WorkspaceSlug.Create("acme"), ownerId);
+        workspace.InviteMember(memberId, WorkspaceMemberRole.Member);
+
+        _currentUser.Setup(c => c.UserId).Returns(ownerId);
+        _workspaceRepo.Setup(r => r.GetByIdWithMembersAsync(workspace.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(workspace);
+        _groupEvictor
+            .Setup(e => e.EvictUserFromBoardGroupsAsync(memberId, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("SignalR unavailable"));
+
+        var result = await CreateHandler().Handle(new RemoveMemberCommand(workspace.Id, memberId), CancellationToken.None);
+
+        Assert.Equal(Unit.Value, result);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 }

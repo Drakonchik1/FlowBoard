@@ -16,3 +16,24 @@ public sealed record CardMovedEvent(
     Guid FromListId,
     Guid ToListId,
     string Position) : IDomainEvent;
+
+/// <summary>
+/// Raised when a comment is added to a card. Sprint 6 broadcasts this over SignalR to the board group.
+/// </summary>
+public sealed record CommentAddedEvent(
+    Guid CommentId,
+    Guid CardId,
+    Guid BoardId,
+    Guid AuthorId,
+    string Body,
+    DateTime CreatedAt) : IDomainEvent;
+
+/// <summary>
+/// Raised when a card is assigned to a workspace member. Sprint 6 queues an email notification.
+/// </summary>
+public sealed record CardAssignedEvent(
+    Guid CardId,
+    Guid BoardId,
+    Guid AssigneeId,
+    Guid AssignedByUserId,
+    string CardTitle) : IDomainEvent;

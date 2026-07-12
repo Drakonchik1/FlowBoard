@@ -1,5 +1,6 @@
 # Local development stack only — do not deploy this file to production as-is.
 # SQL Server is exposed on 1433 and the API runs in Development mode.
+# Production: docker compose -f docker-compose.prod.yml up -d (internal SQL/Redis, Redis AUTH, Production env).
 services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest

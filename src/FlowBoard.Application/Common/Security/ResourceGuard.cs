@@ -25,4 +25,11 @@ internal static class ResourceGuard
         if (!workspace.CanWrite(userId))
             throw new ForbiddenException("This action requires write access. Viewer role is read-only.");
     }
+
+    /// <summary>Throws Forbidden when the user is not the comment author.</summary>
+    public static void EnsureCommentAuthor(Comment comment, Guid userId)
+    {
+        if (comment.AuthorId != userId)
+            throw new ForbiddenException("You can only modify your own comments.");
+    }
 }

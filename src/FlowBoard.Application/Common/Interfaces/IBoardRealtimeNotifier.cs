@@ -8,4 +8,6 @@ namespace FlowBoard.Application.Common.Interfaces;
 public interface IBoardRealtimeNotifier
 {
     Task NotifyCardMovedAsync(CardMovedEvent evt, CancellationToken cancellationToken = default);
+
+    Task NotifyCommentAddedAsync(CommentAddedEvent evt, CancellationToken cancellationToken = default);
 }

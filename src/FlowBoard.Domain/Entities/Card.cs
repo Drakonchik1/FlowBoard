@@ -21,6 +21,7 @@ public sealed class Card : Entity
     public string? Description { get; private set; }
     public FractionalIndex Position { get; private set; } = null!;
     public CardPriority Priority { get; private set; }
+    public Guid? AssigneeId { get; private set; }
     public bool IsDeleted { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
@@ -92,6 +93,25 @@ public sealed class Card : Entity
         UpdatedAt = DateTime.UtcNow;
 
         Raise(new CardMovedEvent(Id, BoardId, fromListId, targetListId, position.Value));
+    }
+
+    /// <summary>
+    /// Assigns the card to a workspace member, or clears the assignee when <paramref name="assigneeId"/> is null.
+    /// Raises <see cref="CardAssignedEvent"/> when the assignee changes to a non-null user.
+    /// </summary>
+    public void Assign(Guid? assigneeId, Guid assignedByUserId)
+    {
+        if (assignedByUserId == Guid.Empty)
+            throw new DomainException("Assigned-by user is required.");
+
+        if (assigneeId == AssigneeId)
+            return;
+
+        AssigneeId = assigneeId;
+        UpdatedAt = DateTime.UtcNow;
+
+        if (assigneeId is { } userId && userId != Guid.Empty)
+            Raise(new CardAssignedEvent(Id, BoardId, userId, assignedByUserId, Title));
     }
 
     public void SoftDelete()

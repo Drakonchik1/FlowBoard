@@ -1,13 +1,14 @@
 ---
-description: FlowBoard project conventions — read SPRINT.md for current task state
-alwaysApply: true
+description: FlowBoard project conventions — read HANDOFF + PROJECT_CONTEXT for state
+globs: "**/*.{cs,csproj,sln,md,json}"
+alwaysApply: false
 ---
 
 # FlowBoard — agent rules
 
 ## Start of every task
 
-1. Read `SPRINT.md`, `HANDOFF.md`, and `tasks/queue.json` for current state.
+1. Read `HANDOFF.md`, `PROJECT_CONTEXT.md`, and `tasks/queue.json` — not full README unless docs task.
 2. One task per chat — do not batch unrelated work.
 3. Use `@` on specific files, not whole codebase.
 4. Run `dotnet test` before finishing.
@@ -16,7 +17,7 @@ alwaysApply: true
 
 ## Stack
 
-ASP.NET Core 10 · Clean Architecture · MediatR · FluentValidation · EF Core 10 · SQL Server · Dapper (reads) · JWT · xUnit + Moq
+See `PROJECT_CONTEXT.md` — do not re-read README for stack summary.
 
 ## Code conventions
 

@@ -5,6 +5,7 @@ using FlowBoard.Domain.Entities;
 using FlowBoard.Domain.Exceptions;
 using FlowBoard.Domain.Interfaces;
 using FlowBoard.Domain.ValueObjects;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 namespace FlowBoard.UnitTests.Handlers.Workspaces;
@@ -17,7 +18,8 @@ public sealed class ChangeMemberRoleCommandHandlerTests
     private readonly Mock<IBoardRealtimeGroupEvictor> _groupEvictor = new();
 
     private ChangeMemberRoleCommandHandler CreateHandler() =>
-        new(_workspaceRepo.Object, _unitOfWork.Object, _currentUser.Object, _groupEvictor.Object);
+        new(_workspaceRepo.Object, _unitOfWork.Object, _currentUser.Object, _groupEvictor.Object,
+            NullLogger<ChangeMemberRoleCommandHandler>.Instance);
 
     [Fact]
     public async Task Handle_Admin_ChangesRole()

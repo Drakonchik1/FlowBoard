@@ -6,12 +6,12 @@
 
 | Field | Value |
 |-------|-------|
-| **Active phase** | **Sprint 6** — Comments + Tags + Email (`close-council` gate before feature work) |
-| **Roadmap sprint** | 6 (Comments + Tags + Email) |
+| **Active phase** | **MVP complete** — council verified; published to GitHub (2026-07-12) |
+| **Roadmap sprint** | 8 (Production deploy) — council verify done |
 | **Branch** | `master` |
-| **Last updated** | 2026-06-18 |
-| **Unit tests** | 198 passing |
-| **Integration tests** | 8 passing (Docker / TestContainers) |
+| **Last updated** | 2026-07-12 |
+| **Unit tests** | 277 passing |
+| **Integration tests** | 21 passing (Docker / TestContainers) |
 
 ## Sprint status
 
@@ -22,9 +22,9 @@
 | 3 Boards + Cards | Done | Domain, EF, Dapper read, API, unit + integration tests |
 | 4 SignalR | Done | CardMoved; stale groups (`close-02`); hub tests (`close-08`); broadcast path (`close-09`) |
 | 5 Redis | Done | Backplane + compose wiring; Redis tests (`close-08`); polish (`close-11`) |
-| 6 Comments + Email | Planned | Next feature sprint — after `close-council` |
-| 7 Hangfire + activity | Planned | After Sprint 6 |
-| 8 Production deploy | Planned | CI, prod compose, live URL |
+| 6 Comments + Email | Done | Comments CRUD, tags, MailKit email queue, integration tests |
+| 7 Hangfire + activity | Done | Hangfire jobs, activity log + GetCardActivity |
+| 8 Production deploy | Done | Prod compose, CI, write rate limits, deploy docs; council fixes (`s8-council-fixes`); council verified (`s8-council-verify`) |
 
 ## Sprint 1 — delivered
 
@@ -52,6 +52,37 @@
 - [x] Migration `CouncilReviewFixes` — filtered unique indexes, FK Restrict
 - [x] Unit tests: workspace command/query handlers
 - [x] `close-10` InviteMember — missing invitee returns workspace 404 (anti-enumeration)
+
+## Sprint 6 — delivered
+
+- [x] `s6-01` `Comment` entity + EF migration; Create/Get/Update/Delete handlers with workspace authz; `CommentsController`; unit tests (+10)
+- [x] `s6-02` `CommentAddedEvent` → `CommentAddedEventHandler` → `IBoardRealtimeNotifier` → SignalR `CommentAdded` to board group; unit tests (+3)
+- [x] `s6-03` `Tag` + `CardTag` entities + migration; workspace tag CRUD; apply/remove on cards; `TagsController`; unit tests (+18)
+- [x] `s6-04` `IEmailService` + MailKit `SmtpEmailService`; `SmtpSettings` via config/secrets; unit tests (+2)
+- [x] `s6-05` `EmailQueue` + `QueuedEmailService` + `EmailBackgroundService`; `AssignCard` + `CardAssignedEvent` → queued assignment email; migration `AddCardAssignee`; unit tests (+8)
+- [x] `s6-06` `CleanupExpiredRefreshTokensService` — daily scan revokes expired refresh tokens; `IRefreshTokenRepository.RevokeExpiredAsync`; unit tests (+2)
+- [x] `s6-07` Integration tests — comment CRUD + soft-delete + `CommentAdded` notifier; tag CRUD + apply/remove + delete cascades; `CommentsAndTagsWorkflowTests` (+5 integration)
+- [x] `s6-council-fixes` Council High/Medium remediation — `Repository.GetByIdAsync` soft-delete filter; `AssigneeId` in Dapper `GetBoard`; assign TOCTOU transaction + clear assignee on `RemoveMember`; comment author-only edit/delete; HTML-encode comment bodies; bounded email queue; assignment email throttle + membership re-check; `CancellationToken.None` post-commit publish; authz/tag/assign tests (+12 unit, +4 integration). **Deferred:** write-endpoint rate limits → `s8-02`; SMTP retry/dead-letter → `s7-02`; `AssigneeId` FK → migration approval (runtime cleanup instead)
+- [x] `s6-council` Live Council — report at `docs/council/sprint-6-report.md`
+- [x] `s6-council-verify` Remediation verified — report at `docs/council/sprint-6-verify-report.md`; council sign-off for publish
+- [x] `s6-docs` Docs sync — Sprint 6 closed; README test counts + API surface; active phase → Sprint 7
+
+## Sprint 7 — delivered
+
+- [x] `s7-01` Hangfire + SQL Server storage — `AddHangfireWithSqlServer`, dashboard at `/jobs` with `Admin` policy (`Hangfire:DashboardAdminEmails`); unit tests (+4)
+- [x] `s7-02` Email + token cleanup → Hangfire — `SendEmailJob` (per-message enqueue with `[AutomaticRetry(Attempts = 3)]`); `CleanupExpiredRefreshTokensJob` (daily recurring); removed `EmailBackgroundService`, `CleanupExpiredRefreshTokensService`, `EmailQueue`; unit tests (+3)
+- [x] `s7-03` `ActivityLog` entity + migration; `ActivityLogEventHandler` writes on `CardCreated`, `CardMoved`, `MemberInvited`; Dapper `GetCardActivity` query + `GET /api/cards/{id}/activity`; unit tests (+7)
+- [x] `s7-docs` Docs sync — Sprint 7 closed; README test counts + API surface; active phase → Sprint 8
+
+## Sprint 8 — delivered
+
+- [x] `s8-01` Production docker-compose (`docker-compose.prod.yml`) — internal SQL/Redis (no host ports), Redis AUTH, `ASPNETCORE_ENVIRONMENT=Production`, `AllowedOrigins` required; `.env.example` + `Program.cs` startup guard
+- [x] `s8-02` Write-endpoint rate limiting — `writes` policy (60/min per user, IP fallback); MVC convention on `[Authorize]` mutations; auth policy unchanged (+7 unit)
+- [x] `s8-03` CI — split `unit-tests` / `integration-tests` jobs; Docker requirement documented; Coverlet cobertura artifact on unit job
+- [x] `s8-04` Deploy docs — README Live API + Railway/Azure/self-hosted guides; `railway.toml`; prod compose migration note
+- [x] `s8-docs` Docs sync — Sprint 8 closed; MVP complete; README roadmap updated; active phase → council (`s8-council`)
+- [x] `s8-council` Live Council — report at `docs/council/sprint-8-report.md`
+- [x] `s8-council-fixes` Council High/Medium remediation — Production pending-migration fail-fast; SMTP misconfig throws (`SmtpNotConfiguredException`); eviction catch/log (close-03 pattern); stop unreadable `MemberInvited` activity rows; `BoardHubJoinRateLimiter` (30/min); `Auth:AllowRegistration` gated in Production; Hangfire `DisableGlobalLocks=false`; HSTS/HTTPS gated on TLS/forwarded headers; single-replica SignalR docs; CI prod compose validate; activity log + RemoveMember assignee + write 429 integration tests (+4 integration, +3 unit). **Deferred:** Critical #1 distributed SignalR eviction (documented single-replica); High #2 query-string hub token; High #3 SQL `sa` least-privilege; High #8 live deploy URL; Medium #11 activity eventual consistency; Medium #18 read rate limits; Medium #22 `AssigneeId` FK (migration approval); Low items
 
 ## Sprint 5 — delivered
 
@@ -99,7 +130,7 @@
 - **Reads:** Dapper via `IBoardReadService` / `BoardReadService` (GetBoard aggregate view)
 - **Ordering:** `FractionalIndex` value object — ordinal string comparison for sort
 - **Security:** Non-members get **404** (not 403) on workspace-scoped resources
-- **Real-time:** `CardMovedEvent` only (Sprint 4); hub groups keyed by `board:{boardId}`; membership tracked in `BoardGroupMembershipRegistry`; evicted on member removal or Viewer downgrade
+- **Real-time:** `CardMovedEvent` + `CommentAddedEvent`; hub groups keyed by `board:{boardId}`; membership tracked in `BoardGroupMembershipRegistry`; evicted on member removal or Viewer downgrade
 - **Redis:** Optional SignalR backplane when `ConnectionStrings:Redis` / `Redis:ConnectionString` / `REDIS_CONNECTION` set; docker-compose sets `ConnectionStrings__Redis=redis:6379` on the API; app runs without Redis for local `dotnet run`
 - **DB:** SQL Server 2022 — `UseSqlServer()`, no Postgres migration
 - **Migrations:** Auto-apply only in Development (`Program.cs`)
@@ -118,21 +149,27 @@ tests/FlowBoard.IntegrationTests/ Full workflow vs real SQL Server
 
 ## API surface (existing)
 
-- `/api/auth/*` — public, rate-limited
+- `/api/auth/*` — public, rate-limited (5/min/IP)
+- Authenticated mutations (POST/PUT/PATCH/DELETE) — rate-limited (60/min/user, IP fallback)
 - `/api/workspaces/*` — workspace CRUD + members
 - `/api/projects/*` — projects in workspace
 - `/api/projects/{id}/boards` — boards in project
 - `/api/boards/{id}` — full board view (Dapper)
 - `/api/boards/{id}/lists` — board lists
 - `/api/cards/*` — card CRUD + move
-- `/hubs/board` — SignalR: `JoinBoard(boardId)`, `LeaveBoard(boardId)`; server pushes `CardMoved`
+- `/api/cards/{cardId}/comments`, `/api/comments/{id}` — comment CRUD
+- `/api/cards/{id}/activity` — card activity log (Dapper read)
+- `/api/workspaces/{workspaceId}/tags`, `/api/tags/{id}` — workspace tag CRUD
+- `/api/cards/{cardId}/tags/{tagId}` — apply/remove tag on card
+- `/hubs/board` — SignalR: `JoinBoard(boardId)`, `LeaveBoard(boardId)`; server pushes `CardMoved`, `CommentAdded`
+- `/jobs` — Hangfire dashboard (JWT + `Admin` policy; configure `Hangfire:DashboardAdminEmails`)
 
 ## Do NOT touch (unless task says so)
 
 - Auth / refresh token rotation logic
 - Workspace RBAC rules (`WorkspaceAccess`, role hierarchy)
 - Existing migrations (add new migration only when schema changes)
-- `docker-compose.yml` production assumptions (dev-only stack)
+- `docker-compose.yml` production assumptions (dev-only stack) — use `docker-compose.prod.yml` for production
 
 ## Local dev (quick ref)
 
@@ -149,9 +186,9 @@ Integration tests require **Docker Desktop** running (skipped otherwise). Use `p
 
 ## Next task (pick one per chat)
 
-**Queue:** `tasks/queue.json` — Sprints 1–5 closed; **`close-council`** verification next, then Sprint 6–8 features. `pwsh scripts/run-next-task.ps1 -Status`
+**Queue:** `tasks/queue.json` — Sprints 1–8 closed; MVP complete; council review next. `pwsh scripts/run-next-task.ps1 -Status`
 
-**Recommended next:** `close-council` — Live Council closeout verification (Sprints 1–5).
+**Recommended next:** `s8-council` — Live Council — Sprint 8 / MVP review (production + security + deploy).
 
 ## Closeout phase (Sprints 1–5 gaps)
 
@@ -195,3 +232,27 @@ Integration tests require **Docker Desktop** running (skipped otherwise). Use `p
 | 2026-06-18 | closeout close-11 | `GetRedisConnectionString` trims whitespace; Redis resolved once in `Program.cs`; `EventHandlers/` convention in README + agent rules; `LeaveBoard` access-check docs; 198 unit tests; `dotnet test` green |
 | 2026-06-18 | closeout close-docs | Sprints 1–5 marked fully closed; closeout phase complete (pending `close-council`); active phase → Sprint 6; README test counts synced (198 unit, 8 integration); `dotnet test` green |
 | 2026-06-18 | Sprint 6 Live Council | Report at `docs/council/closeout-report.md` |
+| 2026-06-18 | sprint6 s6-01 | Comment entity + CRUD API — migration `AddComments`, handlers with workspace authz, `CommentsController`; 208 unit tests; `dotnet test` green |
+| 2026-06-18 | sprint6 s6-02 | `CommentAddedEvent` SignalR broadcast — `CommentAddedEventHandler`, `CommentAddedMessage`, `IBoardHubClient.CommentAdded`; 211 unit tests; `dotnet test` green |
+| 2026-06-18 | sprint6 s6-03 | Tags + CardTags — migration `AddTags`, workspace tag CRUD, apply/remove on cards, `TagsController`; 229 unit tests; `dotnet test` green |
+| 2026-06-18 | sprint6 s6-04 | `IEmailService` + MailKit `SmtpEmailService`; `SmtpSettings` via config/secrets; `SmtpEmailServiceTests` (2 cases); 231 unit tests; `dotnet test` green |
+| 2026-06-18 | sprint6 s6-05 | `EmailQueue` + `QueuedEmailService` + `EmailBackgroundService`; `AssignCard` + `CardAssignedEventHandler`; migration `AddCardAssignee`; 239 unit tests; `dotnet test` green |
+| 2026-06-18 | sprint6 s6-06 | `CleanupExpiredRefreshTokensService` — daily `RevokeExpiredAsync` scan; `IRefreshTokenRepository.RevokeExpiredAsync`; 241 unit tests; `dotnet test` green |
+| 2026-06-18 | sprint6 s6-07 | Integration tests — `CommentsAndTagsWorkflowTests` (comment CRUD, CommentAdded notifier, tag apply/remove/delete); extended `CapturingBoardRealtimeNotifier`; 13 integration tests; `dotnet test` green |
+| 2026-06-18 | Sprint 6 Live Council | Report at `docs/council/sprint-6-report.md` |
+| 2026-07-12 | sprint6 s6-council-fixes | Council High/Medium fixes — soft-delete bypass, assignee lifecycle, comment author/XSS, bounded queue, post-commit token; 253 unit + 17 integration; `dotnet test` green |
+| 2026-07-12 | sprint6 s6-council-verify | Live Council remediation verification — report at `docs/council/sprint-6-verify-report.md`; council sign-off for publish |
+| 2026-07-12 | sprint6 s6-docs | Docs sync — Sprint 6 closed; README test counts + API docs; active phase → Sprint 7; 253 unit + 17 integration; `dotnet test` green |
+| 2026-07-12 | sprint7 s7-01 | Hangfire + SQL Server storage — dashboard at `/jobs` with `Admin` policy; `HangfireServiceExtensions`; 257 unit + 17 integration; `dotnet test` green |
+| 2026-07-12 | sprint7 s7-02 | Email + token cleanup → Hangfire jobs — `SendEmailJob`, `CleanupExpiredRefreshTokensJob` (daily recurring); removed IHostedService workers; 260 unit + 17 integration; `dotnet test` green |
+| 2026-07-12 | sprint7 s7-03 | `ActivityLog` entity + event-driven writes — `ActivityLogEventHandler` for card create/move + member invite; Dapper `GetCardActivity`; `GET /api/cards/{id}/activity`; migration `AddActivityLog`; 267 unit + 17 integration; `dotnet test` green |
+| 2026-07-12 | sprint7 s7-docs | Docs sync — Sprint 7 closed; README test counts + API docs; active phase → Sprint 8; 267 unit + 17 integration; `dotnet test` green |
+| 2026-07-12 | sprint8 s8-01 | `docker-compose.prod.yml` — internal SQL/Redis, Redis AUTH, Production env + `AllowedOrigins`; `.env.example` + `Program.cs` guard; 267 unit + 17 integration; `dotnet test` green |
+| 2026-07-12 | sprint8 s8-02 | Write-endpoint rate limiting — `writes` policy (60/min/user); `WriteRateLimitingConvention`; auth limit unchanged; 274 unit + 17 integration; `dotnet test` green |
+| 2026-07-12 | sprint8 s8-03 | CI — separate unit/integration jobs; Docker documented for TestContainers; Coverlet cobertura artifact; 274 unit + 17 integration; `dotnet test` green |
+| 2026-07-12 | sprint8 s8-04 | README Live API + Railway/Azure/self-hosted deploy guides; `railway.toml`; prod compose migration note; 274 unit + 17 integration; `dotnet test` green |
+| 2026-07-12 | sprint8 s8-docs | Docs sync — Sprint 8 closed; MVP complete; README roadmap updated; active phase → council (`s8-council`); 274 unit + 17 integration; `dotnet test` green |
+| 2026-07-12 | Sprint 8 Live Council | Report at `docs/council/sprint-8-report.md` |
+| 2026-07-12 | sprint8 s8-council-fixes | Council High/Medium fixes — prod migration gate, SMTP fail-fast, eviction resilience, hub join throttle, registration gate, integration gaps; 277 unit + 21 integration; `dotnet test` green |
+| 2026-07-12 | Sprint 8 Live Council — report at docs/council/sprint-8-verify-report.md |
+| 2026-07-12 | publish-mvp | Sprints 6–8 + council verify published to GitHub; Notion synced; 277 unit + 21 integration |

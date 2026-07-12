@@ -1,8 +1,11 @@
+using FlowBoard.Application.Common.Configuration;
 using FlowBoard.Application.Common.Exceptions;
 using FlowBoard.Application.Common.Interfaces;
 using FlowBoard.Domain.Entities;
+using FlowBoard.Domain.Exceptions;
 using FlowBoard.Domain.Interfaces;
 using MediatR;
+using Microsoft.Extensions.Options;
 using DomainRefreshToken = FlowBoard.Domain.Entities.RefreshToken;
 
 namespace FlowBoard.Application.Features.Auth.Commands.Register;
@@ -16,10 +19,14 @@ public sealed class RegisterCommandHandler(
     IRefreshTokenRepository refreshTokenRepository,
     IUnitOfWork unitOfWork,
     IPasswordService passwordService,
-    IJwtService jwtService) : IRequestHandler<RegisterCommand, AuthResponse>
+    IJwtService jwtService,
+    IOptions<AuthSettings> authOptions) : IRequestHandler<RegisterCommand, AuthResponse>
 {
     public async Task<AuthResponse> Handle(RegisterCommand request, CancellationToken cancellationToken)
     {
+        if (!authOptions.Value.AllowRegistration)
+            throw new ForbiddenException("Registration is not available.");
+
         var emailExists = await userRepository.ExistsByEmailAsync(request.Email, cancellationToken);
         if (emailExists)
             throw new ConflictException(

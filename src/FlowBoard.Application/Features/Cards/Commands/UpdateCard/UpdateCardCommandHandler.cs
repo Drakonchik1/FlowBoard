@@ -38,5 +38,5 @@ public sealed class UpdateCardCommandHandler(
 
     private static CardDto ToDto(Card card) => new(
         card.Id, card.BoardListId, card.BoardId, card.Title, card.Description,
-        card.Position.Value, card.Priority.ToString(), card.CreatedAt, card.UpdatedAt);
+        card.Position.Value, card.Priority.ToString(), card.AssigneeId, card.CreatedAt, card.UpdatedAt);
 }

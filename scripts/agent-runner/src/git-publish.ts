@@ -17,6 +17,33 @@ const FORBIDDEN_PATHS = [
   /[/\\]appsettings\.Development\.json$/,
 ];
 
+/** Safe template tracked in git — not a secrets file. */
+function isForbiddenPath(file: string): boolean {
+  if (file === ".env.example") return false;
+  return FORBIDDEN_PATHS.some((p) => p.test(file));
+}
+
+interface GitIdentity {
+  name: string;
+  email: string;
+}
+
+/** Env (.env) or existing git config — never writes git config. */
+async function resolveGitIdentity(projectRoot: string): Promise<GitIdentity | null> {
+  const name = (process.env.GIT_AUTHOR_NAME ?? process.env.GIT_USER_NAME)?.trim();
+  const email = (process.env.GIT_AUTHOR_EMAIL ?? process.env.GIT_USER_EMAIL)?.trim();
+  if (name && email) return { name, email };
+
+  const cfgName = (await runGit(projectRoot, ["config", "user.name"])).stdout.trim();
+  const cfgEmail = (await runGit(projectRoot, ["config", "user.email"])).stdout.trim();
+  if (cfgName && cfgEmail) return { name: cfgName, email: cfgEmail };
+
+  return null;
+}
+
+const GIT_IDENTITY_HINT =
+  "Set GIT_USER_NAME and GIT_USER_EMAIL in FlowBoard/.env (or git config user.name / user.email)";
+
 function runGit(
   cwd: string,
   args: string[]
@@ -24,7 +51,6 @@ function runGit(
   return new Promise((resolve, reject) => {
     const child = spawn("git", args, {
       cwd,
-      shell: true,
       stdio: ["ignore", "pipe", "pipe"],
     });
 
@@ -114,7 +140,7 @@ export async function publishTaskToGitHub(
 
   for (const line of lines) {
     const file = parseStatusPath(line);
-    if (FORBIDDEN_PATHS.some((p) => p.test(file))) {
+    if (isForbiddenPath(file)) {
       return {
         ok: false,
         committed: false,
@@ -135,7 +161,21 @@ export async function publishTaskToGitHub(
   }
 
   const subject = buildCommitSubject(task);
+  const identity = await resolveGitIdentity(projectRoot);
+  if (!identity) {
+    return {
+      ok: false,
+      committed: false,
+      pushed: false,
+      summary: `git commit failed: author identity unknown — ${GIT_IDENTITY_HINT}`,
+    };
+  }
+
   const commit = await runGit(projectRoot, [
+    "-c",
+    `user.name=${identity.name}`,
+    "-c",
+    `user.email=${identity.email}`,
     "commit",
     "-m",
     subject,

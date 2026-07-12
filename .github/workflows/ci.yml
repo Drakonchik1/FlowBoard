@@ -6,8 +6,14 @@ on:
   pull_request:
     branches: [master, main]
 
+# Unit tests: .NET SDK only (no Docker).
+# Integration tests: require a running Docker daemon — TestContainers starts SQL Server.
+#   - CI: ubuntu-latest runners include Docker (`docker info` below must succeed).
+#   - Local: Docker Desktop + `pwsh scripts/run-integration-tests.ps1` (or `dotnet test` when Docker is up).
+#   Without Docker, integration tests skip locally; CI fails the integration job if Docker is unavailable.
+
 jobs:
-  build-and-test:
+  unit-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,9 +23,6 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Verify Docker (integration tests)
-        run: docker info
-
       - name: Restore
         run: dotnet restore
 
@@ -27,7 +30,49 @@ jobs:
         run: dotnet build --no-restore -c Release
 
       - name: Unit tests
-        run: dotnet test tests/FlowBoard.UnitTests --no-build -c Release --verbosity normal
+        run: >
+          dotnet test tests/FlowBoard.UnitTests
+          --no-build -c Release
+          --verbosity normal
+          --collect:"XPlat Code Coverage"
+          --results-directory "${{ runner.temp }}/coverage"
+
+      - name: Upload unit test coverage (Coverlet)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-coverage
+          path: ${{ runner.temp }}/coverage/**/coverage.cobertura.xml
+          if-no-files-found: ignore
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Verify Docker (required for TestContainers)
+        run: |
+          docker info
+          echo "Integration tests use TestContainers to run SQL Server in Docker."
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore -c Release
 
       - name: Integration tests (TestContainers + SQL Server)
         run: dotnet test tests/FlowBoard.IntegrationTests --no-build -c Release --verbosity normal
+
+  prod-compose-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate production compose file
+        run: docker compose -f docker-compose.prod.yml config --quiet

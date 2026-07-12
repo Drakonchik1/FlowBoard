@@ -42,7 +42,7 @@ internal sealed class UnitOfWork(
                 try
                 {
                     var notification = DomainEventNotification.Wrap(domainEvent);
-                    await publisher.Publish(notification, cancellationToken);
+                    await publisher.Publish(notification, CancellationToken.None);
                 }
                 catch (Exception ex)
                 {

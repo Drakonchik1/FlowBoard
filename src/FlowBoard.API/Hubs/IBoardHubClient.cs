@@ -6,4 +6,6 @@ namespace FlowBoard.API.Hubs;
 public interface IBoardHubClient
 {
     Task CardMoved(CardMovedMessage message);
+
+    Task CommentAdded(CommentAddedMessage message);
 }

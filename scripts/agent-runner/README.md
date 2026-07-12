@@ -56,6 +56,8 @@ If verify fails (`status: failed`), nothing is pushed until fixes land and verif
 
 Overrides: `--force-git` (push any done task), `--skip-git` / `-SkipGit` (never push). Sensitive paths (`.env`, `secrets.json`) block the commit.
 
+**Git author for publish:** council-verify commits need `user.name` / `user.email`. Set `GIT_USER_NAME` and `GIT_USER_EMAIL` in repo-root `.env`, or configure git locally. Agent-runner passes identity via `git -c` (does not modify git config).
+
 ### Live Council (sprint-end)
 
 Tasks with `"kind": "council"` run **after** regular implementation tasks:

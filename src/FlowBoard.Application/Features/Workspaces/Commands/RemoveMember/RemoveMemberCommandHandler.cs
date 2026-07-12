@@ -3,6 +3,7 @@ using FlowBoard.Application.Common.Interfaces;
 using FlowBoard.Domain.Exceptions;
 using FlowBoard.Domain.Interfaces;
 using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace FlowBoard.Application.Features.Workspaces.Commands.RemoveMember;
 
@@ -12,9 +13,11 @@ namespace FlowBoard.Application.Features.Workspaces.Commands.RemoveMember;
 /// </summary>
 public sealed class RemoveMemberCommandHandler(
     IWorkspaceRepository workspaceRepository,
+    ICardRepository cardRepository,
     IUnitOfWork unitOfWork,
     ICurrentUserService currentUser,
-    IBoardRealtimeGroupEvictor boardGroupEvictor) : IRequestHandler<RemoveMemberCommand, Unit>
+    IBoardRealtimeGroupEvictor boardGroupEvictor,
+    ILogger<RemoveMemberCommandHandler> logger) : IRequestHandler<RemoveMemberCommand, Unit>
 {
     public async Task<Unit> Handle(RemoveMemberCommand request, CancellationToken cancellationToken)
     {
@@ -28,8 +31,22 @@ public sealed class RemoveMemberCommandHandler(
 
         workspace.RemoveMember(request.UserId);
 
+        await cardRepository.ClearAssigneeForUserInWorkspaceAsync(request.WorkspaceId, request.UserId, cancellationToken);
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
-        await boardGroupEvictor.EvictUserFromBoardGroupsAsync(request.UserId, cancellationToken);
+
+        try
+        {
+            await boardGroupEvictor.EvictUserFromBoardGroupsAsync(request.UserId, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "SignalR group eviction failed after removing user {UserId} from workspace {WorkspaceId}",
+                request.UserId,
+                request.WorkspaceId);
+        }
+
         return Unit.Value;
     }
 }

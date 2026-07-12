@@ -25,9 +25,9 @@ async function main() {
   }
 
   if (next) {
-    console.log(`\nNext pending: ${next.id} — ${next.title}`);
+    console.log(`\nNext runnable: ${next.id} — ${next.title}`);
   } else {
-    console.log("\nNo pending tasks.");
+    console.log("\nNo runnable tasks.");
   }
 
   if (state.lastTaskId) {
