@@ -75,4 +75,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Validate production compose file
+        env:
+          MSSQL_SA_PASSWORD: CI_Validate_Only_Password1
+          JWT_SECRET_KEY: ci-validate-only-jwt-secret-key-32chars
+          REDIS_PASSWORD: ci-validate-only-redis-password
+          ALLOWED_ORIGINS__0: https://example.com
         run: docker compose -f docker-compose.prod.yml config --quiet

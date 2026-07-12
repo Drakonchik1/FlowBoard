@@ -4,7 +4,6 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.Configuration;
 
 namespace FlowBoard.IntegrationTests;
 
@@ -27,17 +26,11 @@ public sealed class WriteRateLimitApiTests(SqlServerFixture fixture) : IAsyncLif
             .WithWebHostBuilder(builder =>
             {
                 builder.UseEnvironment("Development");
-                builder.ConfigureAppConfiguration((_, config) =>
-                {
-                    config.AddInMemoryCollection(new Dictionary<string, string?>
-                    {
-                        ["ConnectionStrings:DefaultConnection"] = fixture.ConnectionString,
-                        ["Jwt:SecretKey"] = "integration-tests-secret-key-0123456789",
-                        ["Jwt:Issuer"] = "FlowBoard.API",
-                        ["Jwt:Audience"] = "FlowBoard.Client",
-                        ["Hangfire:RegisterRecurringJobs"] = "false",
-                    });
-                });
+                builder.UseSetting("ConnectionStrings:DefaultConnection", fixture.ConnectionString);
+                builder.UseSetting("Jwt:SecretKey", "integration-tests-secret-key-0123456789");
+                builder.UseSetting("Jwt:Issuer", "FlowBoard.API");
+                builder.UseSetting("Jwt:Audience", "FlowBoard.Client");
+                builder.UseSetting("Hangfire:RegisterRecurringJobs", "false");
             });
 
         _client = _factory.CreateClient();
