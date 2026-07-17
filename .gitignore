@@ -8,11 +8,18 @@
 .env.*
 !.env.example
 
-# Live Council transient drafts (final reports in docs/council/*.md are committed)
-docs/council/.work/
-
-# Agent runner local state
-tasks/.runner-state.json
+# Local AI / agent workflow (not part of the published product)
+HANDOFF.md
+SPRINT.md
+PROJECT_CONTEXT.md
+START-CHAT.md
+docs/AI-WORKFLOW.md
+docs/council/
+scripts/agent-runner/
+scripts/run-next-task.ps1
+tasks/
+.cursor/
+.cursorignore
 
 # Local dev config (use user-secrets or secrets.example.json)
 **/appsettings.Development.json
