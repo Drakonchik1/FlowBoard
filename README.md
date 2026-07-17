@@ -1,6 +1,6 @@
 # FlowBoard
 
-[![CI](https://github.com/Drakonchik1/FlowBoard/actions/workflows/ci.yml/badge.svg)](https://github.com/Drakonchik1/FlowBoard/actions/workflows/ci.yml)
+[![CI](https://github.com/Drakonchik1/FlowBoard/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/Drakonchik1/FlowBoard/actions/workflows/ci.yml)
 
 ASP.NET Core 10 API portfolio project: **Clean Architecture**, **JWT auth with family-based refresh rotation**, **workspace RBAC**, **boards + cards with Dapper reads**, **SignalR real-time**, **comments + tags + email notifications**, **Hangfire background jobs**, **card activity log**, **optional Redis SignalR backplane**, **277 unit tests**, and **Docker** local + production stacks.
 
