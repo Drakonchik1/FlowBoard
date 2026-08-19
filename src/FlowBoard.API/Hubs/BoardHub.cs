@@ -68,8 +68,12 @@ public sealed class BoardHub(
 
     private Guid GetUserId()
     {
-        var claim = Context.User.FindFirst(JwtRegisteredClaimNames.Sub)
-            ?? Context.User.FindFirst(ClaimTypes.NameIdentifier);
+        var user = Context.User;
+        if (user is null)
+            throw new HubException("Authentication is required.");
+
+        var claim = user.FindFirst(JwtRegisteredClaimNames.Sub)
+            ?? user.FindFirst(ClaimTypes.NameIdentifier);
 
         if (claim is null || !Guid.TryParse(claim.Value, out var userId))
             throw new HubException("Authentication is required.");

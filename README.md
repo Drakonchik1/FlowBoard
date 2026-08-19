@@ -300,9 +300,9 @@ Hub: `/hubs/board` — authenticate with JWT via query string: `?access_token=<a
 dotnet test
 ```
 
-**274 unit tests** — mocked repositories, sub-second feedback.
+**277 unit tests** — mocked repositories, sub-second feedback.
 
-**17 integration tests** — board workflow, auth refresh concurrency, comments/tags, and CardMoved/CommentAdded notifier paths via TestContainers + SQL Server. Require Docker; skipped automatically when Docker is unavailable.
+**21 integration tests** — board workflow, auth refresh concurrency, comments/tags, activity log, write rate limits, and CardMoved/CommentAdded notifier paths via TestContainers + SQL Server. Require Docker; skipped automatically when Docker is unavailable.
 
 ```pwsh
 # Integration tests only (checks Docker, uses TestContainers by default)
@@ -325,7 +325,7 @@ pwsh scripts/run-integration-tests.ps1 -UseCompose
 | 6 | Done | Comments + Tags + Email (MailKit queue, assignment notifications) |
 | 7 | Done | Hangfire background jobs + card activity log |
 | 8 | Done | Production compose, CI, write rate limits, Railway/Azure deploy docs |
-| **MVP** | **Complete** | All 8 sprints delivered; council verify pending (`s8-council`) |
+| **MVP** | **Complete** | All 8 sprints delivered and published |
 
 ## License
 
